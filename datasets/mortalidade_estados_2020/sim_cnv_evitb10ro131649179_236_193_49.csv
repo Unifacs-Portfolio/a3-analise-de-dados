@@ -1,0 +1,69 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Rondônia
+Óbitos p/Residênc por Município
+Período:2020
+"Município";"Óbitos_p/Residênc"
+" MUNICIPIO IGNORADO - RO";13
+"110001 ALTA FLORESTA D'OESTE";96
+"110002 ARIQUEMES";408
+"110003 CABIXI";28
+"110004 CACOAL";339
+"110005 CEREJEIRAS";52
+"110006 COLORADO DO OESTE";60
+"110007 CORUMBIARA";29
+"110008 COSTA MARQUES";39
+"110009 ESPIGAO D'OESTE";116
+"110010 GUAJARA-MIRIM";192
+"110011 JARU";200
+"110012 JI-PARANA";436
+"110013 MACHADINHO D'OESTE";94
+"110014 NOVA BRASILANDIA D'OESTE";70
+"110015 OURO PRETO DO OESTE";136
+"110018 PIMENTA BUENO";145
+"110020 PORTO VELHO";2274
+"110025 PRESIDENTE MEDICI";74
+"110026 RIO CRESPO";11
+"110028 ROLIM DE MOURA";192
+"110029 SANTA LUZIA D'OESTE";30
+"110030 VILHENA";380
+"110032 SAO MIGUEL DO GUAPORE";80
+"110033 NOVA MAMORE";90
+"110034 ALVORADA D'OESTE";54
+"110037 ALTO ALEGRE DOS PARECIS";36
+"110040 ALTO PARAISO";49
+"110045 BURITIS";109
+"110050 NOVO HORIZONTE DO OESTE";21
+"110060 CACAULANDIA";18
+"110070 CAMPO NOVO DE RONDONIA";30
+"110080 CANDEIAS DO JAMARI";122
+"110090 CASTANHEIRAS";8
+"110092 CHUPINGUAIA";27
+"110094 CUJUBIM";55
+"110100 GOVERNADOR JORGE TEIXEIRA";26
+"110110 ITAPUA DO OESTE";28
+"110120 MINISTRO ANDREAZZA";16
+"110130 MIRANTE DA SERRA";36
+"110140 MONTE NEGRO";54
+"110143 NOVA UNIAO";24
+"110145 PARECIS";13
+"110146 PIMENTEIRAS DO OESTE";10
+"110147 PRIMAVERA DE RONDONIA";8
+"110148 SAO FELIPE D'OESTE";12
+"110149 SAO FRANCISCO DO GUAPORE";58
+"110150 SERINGUEIRAS";31
+"110155 TEIXEIROPOLIS";20
+"110160 THEOBROMA";34
+"110170 URUPA";53
+"110175 VALE DO ANARI";28
+"110180 VALE DO PARAISO";27
+"Total";6591
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Consulte o site da Secretaria Estadual de Saúde para mais informações.
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 

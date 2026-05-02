@@ -1,28 +1,59 @@
 import requests
 import pandas as pd
+import os
 
-def extrair_populacao_ibge():
-    # URL da API para Tabela 4714, Variável 93 (População), Localidade N6 (Todos os municípios)
-    url = "https://servicodados.ibge.gov.br/api/v3/agregados/4714/periodos/2022/variaveis/93?localidades=N6[all]"
+def extrair_populacao_ibge(ano):
+    # A URL agora recebe o ano dinamicamente e usa a variável 9324 correta para a tabela 6579
+    url = f"https://servicodados.ibge.gov.br/api/v3/agregados/6579/periodos/{ano}/variaveis/9324?localidades=N6[all]"
     
-    print("Consumindo API SIDRA/IBGE...")
+    print(f"Consumindo API SIDRA/IBGE para o ano {ano}...")
     response = requests.get(url)
+    
+    if response.status_code != 200:
+        print(f"Erro na requisição: Status {response.status_code}")
+        return None
+        
     data = response.json()
     
-    # O IBGE retorna uma estrutura de lista aninhada, precisamos "achatar" os dados
+    # Prevenção de erro caso a API retorne uma lista vazia
+    if not data:
+        print(f"Nenhum dado encontrado para o ano {ano}.")
+        return None
+        
+    # Achatando os dados
     resultados = data[0]['resultados'][0]['series']
     
     lista_populacao = []
     for item in resultados:
+        # Pega o valor do ano dinamicamente
+        valor_str = item['serie'].get(str(ano), '0')
+        
+        # O IBGE às vezes retorna '-' ou '...' para dados faltantes. 
+        # Esse bloco try/except previne que o script quebre nesses casos.
+        try:
+            populacao = int(valor_str)
+        except ValueError:
+            populacao = 0 
+            
         lista_populacao.append({
             'id_municipio': item['localidade']['id'],
             'nome_municipio': item['localidade']['nome'],
-            'populacao': int(item['serie']['2022'])
+            'populacao': populacao
         })
     
     df_ibge = pd.DataFrame(lista_populacao)
-    df_ibge.to_csv('populacao_ibge_2022.csv', index=False)
-    print("Dados do IBGE salvos com sucesso!")
+    
+    # Cria o diretório específico do ano, caso ele não exista
+    caminho_pasta = f'../datasets/datasets{ano}'
+    os.makedirs(caminho_pasta, exist_ok=True)
+    
+    # Salva o arquivo dinamicamente
+    caminho_arquivo = f'{caminho_pasta}/populacao_ibge_{ano}.csv'
+    df_ibge.to_csv(caminho_arquivo, index=False)
+    
+    print(f"Dados do IBGE ({ano}) salvos com sucesso em: {caminho_arquivo}\n")
     return df_ibge
 
-df_pop = extrair_populacao_ibge()
+# Executando o pipeline para os dois anos desejados
+df_pop_2018 = extrair_populacao_ibge(2018)
+df_pop_2020 = extrair_populacao_ibge(2020)

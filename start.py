@@ -44,7 +44,7 @@ def main():
     
     # Executar a aplicação principal
     print("\n" + "="*45)
-    print(" 🎯 Tudo pronto! Iniciando a aplicação (main.py)...")
+    print(" 🎯 Tudo pronto! Iniciando a aplicação (main.py), em seguida será executado o arquivo da análise exploratória (eda.py)...")
     print("="*45 + "\n")
     
     try:

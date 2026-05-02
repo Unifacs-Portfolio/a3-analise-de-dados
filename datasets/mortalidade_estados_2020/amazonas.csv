@@ -1,0 +1,79 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Amazonas
+Óbitos p/Residênc por Município
+Período:2020
+"Município";"Óbitos_p/Residênc"
+" MUNICIPIO IGNORADO - AM";14
+"130002 ALVARAES";40
+"130006 AMATURA";24
+"130008 ANAMA";17
+"130010 ANORI";29
+"130014 APUI";57
+"130020 ATALAIA DO NORTE";23
+"130030 AUTAZES";115
+"130040 BARCELOS";51
+"130050 BARREIRINHA";69
+"130060 BENJAMIN CONSTANT";122
+"130063 BERURI";33
+"130068 BOA VISTA DO RAMOS";39
+"130070 BOCA DO ACRE";129
+"130080 BORBA";80
+"130083 CAAPIRANGA";27
+"130090 CANUTAMA";29
+"130100 CARAUARI";68
+"130110 CAREIRO";111
+"130115 CAREIRO DA VARZEA";46
+"130120 COARI";302
+"130130 CODAJAS";55
+"130140 EIRUNEPE";103
+"130150 ENVIRA";39
+"130160 FONTE BOA";58
+"130165 GUAJARA";32
+"130170 HUMAITA";178
+"130180 IPIXUNA";24
+"130185 IRANDUBA";208
+"130190 ITACOATIARA";346
+"130195 ITAMARATI";20
+"130200 ITAPIRANGA";34
+"130210 JAPURA";14
+"130220 JURUA";27
+"130230 JUTAI";54
+"130240 LABREA";104
+"130250 MANACAPURU";359
+"130255 MANAQUIRI";55
+"130260 MANAUS";10160
+"130270 MANICORE";110
+"130280 MARAA";29
+"130290 MAUES";169
+"130300 NHAMUNDA";44
+"130310 NOVA OLINDA DO NORTE";79
+"130320 NOVO AIRAO";47
+"130330 NOVO ARIPUANA";55
+"130340 PARINTINS";262
+"130350 PAUINI";32
+"130353 PRESIDENTE FIGUEIREDO";121
+"130356 RIO PRETO DA EVA";81
+"130360 SANTA ISABEL DO RIO NEGRO";42
+"130370 SANTO ANTONIO DO ICA";63
+"130380 SAO GABRIEL DA CACHOEIRA";185
+"130390 SAO PAULO DE OLIVENCA";68
+"130395 SAO SEBASTIAO DO UATUMA";10
+"130400 SILVES";22
+"130406 TABATINGA";251
+"130410 TAPAUA";45
+"130420 TEFE";240
+"130423 TONANTINS";30
+"130426 UARINI";35
+"130430 URUCARA";43
+"130440 URUCURITUBA";35
+"Total";15393
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Consulte o site da Secretaria Estadual de Saúde para mais informações.
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 

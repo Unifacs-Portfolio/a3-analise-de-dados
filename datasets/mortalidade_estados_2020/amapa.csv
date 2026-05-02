@@ -1,0 +1,32 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Amapá
+Óbitos p/Residênc por Município
+Período:2020
+"Município";"Óbitos_p/Residênc"
+"160005 SERRA DO NAVIO";11
+"160010 AMAPA";19
+"160015 PEDRA BRANCA DO AMAPARI";31
+"160020 CALCOENE";36
+"160021 CUTIAS";10
+"160023 FERREIRA GOMES";22
+"160025 ITAUBAL";4
+"160027 LARANJAL DO JARI";167
+"160030 MACAPA";2009
+"160040 MAZAGAO";40
+"160050 OIAPOQUE";90
+"160053 PORTO GRANDE";54
+"160055 PRACUUBA";17
+"160060 SANTANA";442
+"160070 TARTARUGALZINHO";29
+"160080 VITORIA DO JARI";27
+"Total";3008
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Consulte o site da Secretaria Estadual de Saúde para mais informações.
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 

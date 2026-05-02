@@ -1,0 +1,39 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Acre
+Óbitos p/Residênc por Município
+Período:2020
+"Município";"Óbitos_p/Residênc"
+" MUNICIPIO IGNORADO - AC";4
+"120001 ACRELANDIA";46
+"120005 ASSIS BRASIL";26
+"120010 BRASILEIA";103
+"120013 BUJARI";46
+"120017 CAPIXABA";32
+"120020 CRUZEIRO DO SUL";247
+"120025 EPITACIOLANDIA";62
+"120030 FEIJO";96
+"120032 JORDAO";6
+"120033 MANCIO LIMA";46
+"120034 MANOEL URBANO";26
+"120035 MARECHAL THAUMATURGO";19
+"120038 PLACIDO DE CASTRO";48
+"120039 PORTO WALTER";7
+"120040 RIO BRANCO";1700
+"120042 RODRIGUES ALVES";34
+"120043 SANTA ROSA DO PURUS";12
+"120045 SENADOR GUIOMARD";80
+"120050 SENA MADUREIRA";125
+"120060 TARAUACA";97
+"120070 XAPURI";51
+"120080 PORTO ACRE";86
+"Total";2999
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Consulte o site da Secretaria Estadual de Saúde para mais informações.
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 
