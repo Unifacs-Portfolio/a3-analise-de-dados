@@ -1,130 +1,148 @@
 import pandas as pd
 import glob
-from functools import reduce
+import os
 
-def remove_footer(df):
-    filtro_total = df.iloc[:, 0].astype(str).str.contains('Total', case=False, na=False)
-    if filtro_total.any():
-        df = df.iloc[:filtro_total.idxmax()]
+# ==========================================
+# CONFIGURAÇÃO DE COLUNAS (O MAPA AGORA É SÓ PARA OS VALORES)
+# ==========================================
+MAPA_COLUNAS = {
+    'gini': 'Índice de Gini', # Ajuste para o nome da coluna no GINI 18, 21, 22, 23.csv
+    'renda': 'Rendimento',    # Ajuste para o nome da coluna no PNAD 18, 21, 22, 23.csv
+    'pib': 'PIB'              # Ajuste para o nome da coluna no PIB 18, 21, 22, 23.csv
+}
+
+def limpar_string_uf(df, nome_coluna):
+    """Extrai apenas os 2 dígitos do código do Estado (Ex: '29 Bahia' -> '29')"""
+    df['id_uf'] = df[nome_coluna].astype(str).str.extract(r'^\s*(\d{2})')[0]
+    df = df.dropna(subset=['id_uf'])
     return df
-def processar_dados_ano(ano):
-    """
-    Função que extrai, limpa e consolida os dados de um ano específico.
-    """
-    print(f'\n--- Iniciando processamento do ano: {ano} ---')
 
-    arquivos_estados = glob.glob(f'./datasets/mortalidade_estados_{ano}/*.csv')
+def processar_matriz_temporal_datasus(caminho_arquivo, nome_valor):
+    """Lê os arquivos do DATASUS que têm os anos como colunas e transforma em linhas (Melt)"""
+    df = pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, skipfooter=1, engine='python')
     
-    lista_dfs = [
-        remove_footer(pd.read_csv(
-            arquivo, 
-            encoding='latin1', 
-            sep=';', 
-            header=3,
-            names=['municipio', 'obitos_por_residencia']
-        )) 
-        for arquivo in arquivos_estados
-    ]
-    df_mort_evit = pd.concat(lista_dfs, ignore_index=True)
-    df_mort_evit[['id_municipio', 'nome_municipio']] = df_mort_evit['municipio'].astype(str).str.split(r'^\s*(\d{6})\s+', expand=True).iloc[:, 1:3]
-    df_mort_evit = df_mort_evit.drop(columns=['municipio'])
+    # O HACK SÊNIOR: Pega o nome da primeira coluna dinamicamente, ignorando erros de digitação do governo
+    coluna_uf = df.columns[0]
+    df = limpar_string_uf(df, coluna_uf)
+    
+    # Transforma as colunas de anos (2018, 2021...) em linhas
+    df_melt = pd.melt(df, id_vars=['id_uf'], value_vars=['2018', '2021', '2022', '2023'], var_name='ano', value_name=nome_valor)
+    
+    # Converte para número, removendo traços ou erros do DATASUS
+    df_melt[nome_valor] = pd.to_numeric(df_melt[nome_valor].astype(str).str.replace('-', '0'), errors='coerce').fillna(0)
+    return df_melt
 
-    df_pop = pd.read_csv(f'./datasets/datasets{ano}/populacao_ibge_{ano}.csv')
-    df_pop['id_municipio'] = df_pop['id_municipio'].astype(str).str[:6]
-    
-    df_ans = remove_footer(pd.read_csv(
-        f'./datasets/datasets{ano}/beneficiarios_{ano}.csv', 
-        encoding='latin1', 
-        sep=';', 
-        header=3, 
-        usecols=[0, 1], 
-        names=['municipio', 'beneficiarios_ans']
-    ))
-    df_ans[['id_municipio', 'nome_municipio']] = df_ans['municipio'].astype(str).str.split(r'^\s*(\d{6})\s+', expand=True).iloc[:, 1:3]
-    df_ans = df_ans.drop(columns=['municipio'])
-    
-    df_pib = pd.read_csv(
-        f'./datasets/datasets{ano}/pib_municipios_ibge_{ano}.csv', 
-        sep=';', 
-        header=3, 
-        decimal=',',
-        names=['id_municipio', 'nome_municipio', 'pib_milhares']
-    ) 
-    df_pib['id_municipio'] = df_pib['id_municipio'].astype(str).str[:6]
-    
-    print(df_mort_evit)
-    df_mort_evit.info()
-    print()
-    
-    print(df_pop)
-    df_pop.info()
-    print()
-    
-    print(df_ans)
-    df_ans.info()
-    print()
-    
-    print(df_pib)
-    df_pib.info()
-    
-    print('\nValores Nulos:')
-    print(df_mort_evit.isna().sum())
-    
-    print('\nValores Nulos:')
-    print(df_pop.isna().sum())
-    
-    print('\nValores Nulos:')
-    print(df_ans.isna().sum())
-    
-    print('\nValores Nulos:')
-    print(df_pib.isna().sum())
-
-    fila_de_dados = [
-        df_pop,
-        df_pib[['id_municipio', 'pib_milhares']],
-        df_ans[['id_municipio', 'beneficiarios_ans']],
-        df_mort_evit[['id_municipio', 'obitos_por_residencia']]
-    ]
-    df_consolidado = reduce(
-        lambda left, right: pd.merge(left, right, on='id_municipio', how='left'), 
-        fila_de_dados
-    )
-    print(df_consolidado)
-    df_consolidado.info()
-    df_consolidado['beneficiarios_ans'] = df_consolidado['beneficiarios_ans'].fillna(0).astype(int)
-    df_consolidado['obitos_por_residencia'] = df_consolidado['obitos_por_residencia'].fillna(0).astype(int)
-    df_consolidado.info()
-    print("\n--- Verificando o Município sem PIB ---")
-    print(df_consolidado[df_consolidado['pib_milhares'].isna()])
-    df_consolidado = df_consolidado.dropna(subset=['pib_milhares'])
-    
-    print(f"Total de municípios consistentes: {len(df_consolidado)}")
-    
-    df_consolidado['taxa_mortalidade_evitavel'] = (df_consolidado['obitos_por_residencia'] / df_consolidado['populacao']) * 100000
-    df_consolidado['perc_cobertura_saude'] = (df_consolidado['beneficiarios_ans'] / df_consolidado['populacao']) * 100
-    df_consolidado['ano'] = int(ano)
-    print(df_consolidado)
-    df_consolidado.info()
-    print(f"\n--- ANO {ano} CONSOLIDADO COM SUCESSO! ---")
-    return df_consolidado
-
-if __name__ == "__main__":
-    print('Iniciando pipeline de dados histórico...')
-    
-    anos_analise = ['2018', '2020', '2022']
-    bases_anuais = []
-    
-    for ano in anos_analise:
-        base_do_ano = processar_dados_ano(ano)
-        bases_anuais.append(base_do_ano)
+def processar_matriz_ibge(caminho_arquivo, nome_valor, col_original):
+    """Lê os arquivos do IBGE (Gini, PNAD, PIB) e padroniza para o Merge"""
+    try:
+        df = pd.read_csv(caminho_arquivo, sep=';', skiprows=3) 
+    except:
+        df = pd.read_csv(caminho_arquivo, sep=',')
         
-    print('\nEmpilhando todos os anos em um dataset mestre...')
-    df_historico = pd.concat(bases_anuais, ignore_index=True)
+    # O HACK SÊNIOR APLICADO AO IBGE TAMBÉM
+    coluna_uf = df.columns[0]
+    df = limpar_string_uf(df, coluna_uf)
     
-    caminho_saida = './datasets/base_consolidada_saude_historico.csv'
-    print(df_historico.tail(10))
-    df_historico.info()
-    print(df_historico.describe(include='all'))
-    df_historico.to_csv(caminho_saida, index=False)
+    # Se o arquivo já vier com a coluna 'Ano' pronta (Formato longo)
+    if 'Ano' in df.columns or 'ano' in df.columns:
+        col_ano = 'Ano' if 'Ano' in df.columns else 'ano'
+        
+        # Pega a coluna de valor usando .loc para evitar erros se o nome não bater 100%
+        # Se o MAPA falhar, ele tenta pegar a última coluna numérica do arquivo
+        try:
+            df = df.rename(columns={col_original: nome_valor, col_ano: 'ano'})
+        except:
+            ultima_coluna = df.columns[-1]
+            df = df.rename(columns={ultima_coluna: nome_valor, col_ano: 'ano'})
+            
+        return df[['id_uf', 'ano', nome_valor]]
+    else:
+        # Se vier com anos nas colunas, faz o melt igual DATASUS
+        df_melt = pd.melt(df, id_vars=['id_uf'], value_vars=['2018', '2021', '2022', '2023'], var_name='ano', value_name=nome_valor)
+        return df_melt
+
+print('Iniciando processamento das matrizes históricas (Raiz)...')
+
+# 1. Carregando as Matrizes do DATASUS
+df_internacoes = processar_matriz_temporal_datasus('./datasets/datasets_juntos/datasus_internacoes.csv', 'total_internacoes')
+df_permanencia = processar_matriz_temporal_datasus('./datasets/datasets_juntos/datasus_dias_permanencia.csv', 'dias_permanencia')
+df_icsap = processar_matriz_temporal_datasus('./datasets/datasets_juntos/datasus_icsap.csv', 'internacoes_icsap')
+
+# 2. Carregando as Matrizes Econômicas (IBGE)
+df_gini = processar_matriz_ibge('./datasets/datasets_juntos/GINI.csv', 'indice_gini', MAPA_COLUNAS['gini'])
+df_renda = processar_matriz_ibge('./datasets/datasets_juntos/PNAD.csv', 'renda_media', MAPA_COLUNAS['renda'])
+df_pib = processar_matriz_ibge('./datasets/datasets_juntos/PIB.csv', 'pib_total', MAPA_COLUNAS['pib'])
+
+print('Unificando as bases centrais...')
+df_mestre = df_internacoes.merge(df_permanencia, on=['id_uf', 'ano'], how='left')\
+                          .merge(df_icsap, on=['id_uf', 'ano'], how='left')\
+                          .merge(df_gini, on=['id_uf', 'ano'], how='left')\
+                          .merge(df_renda, on=['id_uf', 'ano'], how='left')\
+                          .merge(df_pib, on=['id_uf', 'ano'], how='left')
+
+# 3. Processando Pastas Anuais (Mortalidade e População)
+anos_analise = ['2018', '2021', '2022', '2023']
+bases_anuais = []
+
+for ano in anos_analise:
+    print(f'Buscando pastas locais do ano {ano}...')
     
-    print(f'Pipeline finalizada com sucesso! Base histórica salva em: {caminho_saida}')
+    # Mortalidade Evitável
+    arquivos_mort = glob.glob(f'./datasets/datasets{ano}/mortalidade_*.csv')
+    if arquivos_mort:
+        df_mort = pd.read_csv(arquivos_mort[0], encoding='latin1', sep=';', header=3, skipfooter=1, engine='python')
+        
+        # Pega a primeira coluna dinamicamente
+        coluna_uf_mort = df_mort.columns[0]
+        df_mort = limpar_string_uf(df_mort, coluna_uf_mort)
+        
+        df_mort = df_mort.rename(columns={df_mort.columns[1]: 'obitos_evitaveis'})
+        df_mort['ano'] = ano
+        df_mort = df_mort[['id_uf', 'ano', 'obitos_evitaveis']]
+    else:
+        print(f"Aviso: Arquivo de mortalidade não encontrado para {ano}")
+        continue
+
+    # População
+    arq_pop = f'./datasets/datasets{ano}/populacao_ibge_{ano}.csv'
+    if os.path.exists(arq_pop):
+        df_pop = pd.read_csv(arq_pop)
+        if 'id_municipio' in df_pop.columns:
+            df_pop = df_pop.rename(columns={'id_municipio': 'id_uf'})
+        df_pop['id_uf'] = df_pop['id_uf'].astype(str)
+        df_pop['ano'] = ano
+        df_pop = df_pop[['id_uf', 'ano', 'nome_uf', 'populacao']]
+    else:
+        print(f"Aviso: Arquivo de população não encontrado para {ano}")
+        continue
+        
+    df_ano_consolidado = df_pop.merge(df_mort, on=['id_uf', 'ano'], how='left')
+    bases_anuais.append(df_ano_consolidado)
+
+df_anuais = pd.concat(bases_anuais, ignore_index=True)
+
+# 4. O Grande Merge Final
+print('Gerando Banco de Dados Final e Calculando Indicadores Relativos...')
+df_final = df_anuais.merge(df_mestre, on=['id_uf', 'ano'], how='left')
+
+# Convertendo colunas para numérico
+cols_numericas = ['obitos_evitaveis', 'total_internacoes', 'dias_permanencia', 'internacoes_icsap', 'pib_total', 'renda_media']
+for col in cols_numericas:
+    df_final[col] = pd.to_numeric(df_final[col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+
+# ==========================================
+# CRIAÇÃO DAS FEATURES CIENTÍFICAS
+# ==========================================
+
+df_final['pib_per_capita'] = (df_final['pib_total'] * 1000) / df_final['populacao']
+df_final['taxa_icsap_100k'] = (df_final['internacoes_icsap'] / df_final['populacao']) * 100000
+df_final['tempo_medio_permanencia'] = df_final['dias_permanencia'] / df_final['total_internacoes'].replace(0, 1)
+df_final['taxa_mortalidade_evitavel_100k'] = (df_final['obitos_evitaveis'] / df_final['populacao']) * 100000
+
+# Limpeza e Exportação
+df_final = df_final.dropna(subset=['id_uf']).round(2)
+caminho_saida = './datasets/base_consolidada_saude_historico.csv'
+df_final.to_csv(caminho_saida, index=False)
+
+print(df_final[['nome_uf', 'ano', 'taxa_mortalidade_evitavel_100k', 'tempo_medio_permanencia']].head())
+print(f'\nPipeline concluído com sucesso! Tabela Mestra salva em: {caminho_saida}')

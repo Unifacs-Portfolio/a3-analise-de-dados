@@ -1,0 +1,42 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Brasil
+Óbitos p/Residênc por Unidade da Federação
+Período:2023
+"Unidade da Federação";"Óbitos_p/Residênc"
+"11 Rondônia";6119
+"12 Acre";2463
+"13 Amazonas";12746
+"14 Roraima";2093
+"15 Pará";26350
+"16 Amapá";2471
+"17 Tocantins";5207
+"21 Maranhão";22279
+"22 Piauí";11917
+"23 Ceará";32193
+"24 Rio Grande do Norte";11837
+"25 Paraíba";15163
+"26 Pernambuco";38741
+"27 Alagoas";13394
+"28 Sergipe";8026
+"29 Bahia";57979
+"31 Minas Gerais";83046
+"32 Espírito Santo";15416
+"33 Rio de Janeiro";80890
+"35 São Paulo";178776
+"41 Paraná";46299
+"42 Santa Catarina";27187
+"43 Rio Grande do Sul";48607
+"50 Mato Grosso do Sul";11409
+"51 Mato Grosso";13435
+"52 Goiás";26433
+"53 Distrito Federal";7766
+"Total";808242
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 
