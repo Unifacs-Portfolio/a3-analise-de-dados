@@ -25,7 +25,8 @@ def extrair_populacao_estado_ibge(ano):
         return None
 
     print(f"Consumindo API SIDRA/IBGE para o ano {ano}...")
-    response = requests.get(url)
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
     
     if response.status_code != 200:
         print(f"Erro na requisição: Status {response.status_code}")
