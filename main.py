@@ -36,7 +36,7 @@ def processar_matriz_ibge(caminho_arquivo, nome_valor, col_original):
     """Lê os arquivos do IBGE (Gini, PNAD, PIB) e padroniza para o Merge"""
     try:
         df = pd.read_csv(caminho_arquivo, sep=';', skiprows=3) 
-    except:
+    except (pd.errors.ParserError, UnicodeDecodeError):
         df = pd.read_csv(caminho_arquivo, sep=',')
         
     # O HACK SÊNIOR APLICADO AO IBGE TAMBÉM
