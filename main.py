@@ -102,15 +102,36 @@ def processar_dataset_pib(caminho_arquivo):
         value_name='pib_milhares'
     )
     return df
-
+def processar_datasus_obitos(caminho_arquivo):
+    df = remove_footer(pd.read_csv(
+        caminho_arquivo, 
+        encoding='latin1', 
+        header=3, 
+        sep=';',
+        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023']
+    ))
+    df = df.rename(columns={
+        df.columns[0]: 'unidade_federativa',
+    })
+    colunas_alvo = df.columns[1:]
+    df[colunas_alvo] = df[colunas_alvo].astype(int)
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(
+        id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
+        var_name='ano',
+        value_name='obitos_hospitalares'
+    )
+    return df
 print('Iniciando processamento das matrizes históricas (Raiz)...')
 df_internacoes = processar_datasus_internacoes('./datasets/morbidade_hospitalar_sus/internacoes.csv')
 df_permanencia = processar_datasus_dias_permanencia('./datasets/morbidade_hospitalar_sus/dias_permanencia.csv')
 df_gini = processar_dataset_gini('./datasets/datasets_juntos/indice_gini.csv')
 df_renda = processar_dataset_renda_capita('./datasets/datasets_juntos/renda_per_capita.csv')
 df_pib = processar_dataset_pib('./datasets/datasets_juntos/pib_corrente.csv')
+df_obitos_hospitalares = processar_datasus_obitos('./datasets/morbidade_hospitalar_sus/obitos_hospitalares.csv')
 
-dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes]
+dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares]
 df_consolidado = reduce(
     lambda esquerda, direita: pd.merge(
         esquerda, 
