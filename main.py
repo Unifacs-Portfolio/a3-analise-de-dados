@@ -271,3 +271,5 @@ if __name__ == "__main__":
     print("\nAmostra dos Dados Consolidados:")
     print(df_consolidado.head())
     print(df_consolidado.tail())
+
+    print(df_consolidado.info())
