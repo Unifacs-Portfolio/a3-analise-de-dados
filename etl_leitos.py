@@ -51,9 +51,9 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
             esquerda, 
             direita, 
             on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
-            how='left'
+            how='outer'
             ), 
         dfs_leitos
-    )
+    ).fillna(0)
 
     return df_bloco
