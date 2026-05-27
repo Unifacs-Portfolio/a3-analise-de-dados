@@ -201,7 +201,7 @@ def processar_dataset_idhm(caminho_arquivo):
     )
     df = df.rename(columns={'Código': 'id_unidade_federativa', 
                             'Estado': 'nome_unidade_federativa'})
-    df['id_unidade_federativa'] = df['id_unidade_federativa'].astype(str).str.zfill(2)
+    df['id_unidade_federativa'] = pd.to_numeric(df['id_unidade_federativa'], errors='coerce').fillna(0).astype(int).astype(str).str.zfill(2)
     
     #Foward Fill
     df['2022'] = df['2021']
