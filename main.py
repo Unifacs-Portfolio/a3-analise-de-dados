@@ -2,13 +2,21 @@ import pandas as pd
 import glob
 import os
 from functools import reduce
-from etl_leitos import extrair_bloco_infraestrutura
-from utils import remove_footer, split_id_name_unidade_federativa
 
-# =============================================
-# Função para processar os dados de internações
-# ==============================================
-
+def remove_footer(df):
+    filtro_total = df.iloc[:, 0].astype(str).str.contains('Total', case=False, na=False)
+    indices = df[df[df.columns[1]] == 'Distrito Federal'].index
+    if filtro_total.any():
+        df = df.iloc[:filtro_total.idxmax()]
+    elif not indices.empty:
+        indice_final = indices[0]
+        df = df.loc[:indice_final]
+    return df
+def split_id_name_unidade_federativa(df, nome_coluna):
+    campos = df[nome_coluna].astype(str).str.extract(r'^\s*(\d{2})\s*(.*)')
+    df['id_unidade_federativa'] = campos[0]
+    df['nome_unidade_federativa'] = campos[1]
+    return df
 def processar_datasus_internacoes(caminho_arquivo):
     df = remove_footer(pd.read_csv(
         caminho_arquivo, 
@@ -30,11 +38,6 @@ def processar_datasus_internacoes(caminho_arquivo):
         value_name='internacoes'
     )
     return df
-
-# =============================================
-# Função para processar os dados de permanência 
-# ==============================================
-
 def processar_datasus_dias_permanencia(caminho_arquivo):
     df = remove_footer(pd.read_csv(
         caminho_arquivo, 
@@ -56,11 +59,6 @@ def processar_datasus_dias_permanencia(caminho_arquivo):
         value_name='dias_internacao'
     )
     return df
-
-# =============================================
-# Função para processar os dados de Gini
-# ==============================================
-
 def processar_dataset_gini(caminho_arquivo):
     df = remove_footer(pd.read_csv(
         caminho_arquivo, 
@@ -68,19 +66,16 @@ def processar_dataset_gini(caminho_arquivo):
         header=3,
         decimal=','
     ))
-    df = df.rename(columns={df.columns[0]: 'id_unidade_federativa', 
-                            df.columns[1]: 'nome_unidade_federativa'})
+    df = df.rename(columns={
+        df.columns[0]: 'id_unidade_federativa',
+        df.columns[1]: 'nome_unidade_federativa'
+    })
     df = df.melt(
         id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
         var_name='ano',
         value_name='indice_gini'
     )
     return df
-
-# =============================================
-# Função para processar os dados de renda per capita
-# ==============================================
-
 def processar_dataset_renda_capita(caminho_arquivo):
     df = remove_footer(pd.read_csv(caminho_arquivo, header=3, sep=';'))
     df = df.rename(columns={
@@ -95,11 +90,6 @@ def processar_dataset_renda_capita(caminho_arquivo):
         value_name='renda_per_capita'
     )
     return df
-
-# =============================================
-# Função para processar os dados do PIB
-# ==============================================
-
 def processar_dataset_pib(caminho_arquivo):
     df = remove_footer(pd.read_csv(caminho_arquivo, header=3, sep=';', decimal=','))
     df = df.rename(columns={
@@ -112,11 +102,6 @@ def processar_dataset_pib(caminho_arquivo):
         value_name='pib_milhares'
     )
     return df
-
-# =============================================
-# Função para processar os dados de Obitos
-# ==============================================
-
 def processar_datasus_obitos(caminho_arquivo):
     df = remove_footer(pd.read_csv(
         caminho_arquivo, 
@@ -138,140 +123,22 @@ def processar_datasus_obitos(caminho_arquivo):
         value_name='obitos_hospitalares'
     )
     return df
+print('Iniciando processamento das matrizes históricas (Raiz)...')
+df_internacoes = processar_datasus_internacoes('./datasets/morbidade_hospitalar_sus/internacoes.csv')
+df_permanencia = processar_datasus_dias_permanencia('./datasets/morbidade_hospitalar_sus/dias_permanencia.csv')
+df_gini = processar_dataset_gini('./datasets/datasets_juntos/indice_gini.csv')
+df_renda = processar_dataset_renda_capita('./datasets/datasets_juntos/renda_per_capita.csv')
+df_pib = processar_dataset_pib('./datasets/datasets_juntos/pib_corrente.csv')
+df_obitos_hospitalares = processar_datasus_obitos('./datasets/morbidade_hospitalar_sus/obitos_hospitalares.csv')
 
-# =============================================
-# Função para processar os dados de População
-# ==============================================
-
-def processar_dataset_populacao(caminho_arquivo):
-    df = remove_footer(pd.read_csv(
-        caminho_arquivo, 
-        encoding='latin1', 
-        sep=';', 
-        header=3,
-        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'] 
-    ))
-    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
-    colunas_alvo = df.columns[1:]
-    for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col].astype(str).str.replace('.', '', regex=False).str.replace('-', '0'), errors='coerce').fillna(0).astype(int)
-    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
-    df = df.drop(columns=['unidade_federativa'])
-    df = df.melt(
-        id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
-        var_name='ano',
-        value_name='populacao'
-    )
-    return df
-
-# =============================================
-# Função para processar os dados de Obitos_Evitaveis
-# ==============================================
-
-def processar_datasus_obitos_evitaveis(caminho_arquivo):
-    df = remove_footer(pd.read_csv(
-        caminho_arquivo, 
-        encoding='latin1', 
-        sep=';', 
-        header=3,
-        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'] 
-    ))
-    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
-    colunas_alvo = df.columns[1:]
-    for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col].astype(str).str.replace('.', '', regex=False).str.replace('-', '0'), errors='coerce').fillna(0).astype(int)
-    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
-    df = df.drop(columns=['unidade_federativa'])
-    df = df.melt(
-        id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
-        var_name='ano',
-        value_name='obitos_evitaveis'
-    )
-    return df
-
-# =============================================
-# Função para processar os dados de IDHM
-# ==============================================
-
-def processar_dataset_idhm(caminho_arquivo):
-    df = pd.read_csv(
-        caminho_arquivo, 
-        encoding='utf-8', 
-        sep=',', 
-        header=1,
-        usecols=['Código', 'Estado', '2018', '2021'] 
-    )
-    df = df.rename(columns={'Código': 'id_unidade_federativa', 
-                            'Estado': 'nome_unidade_federativa'})
-    df['id_unidade_federativa'] = pd.to_numeric(df['id_unidade_federativa'], errors='coerce').fillna(0).astype(int).astype(str).str.zfill(2)
-    
-    #Foward Fill
-    df['2022'] = df['2021']
-    df['2023'] = df['2021']
-    
-    df = df.melt(
-        id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
-        value_vars=['2018', '2021', '2022', '2023'],
-        var_name='ano',
-        value_name='idhm'
-    )
-    return df
-
-# =============================================
-# Parte Principal do código
-# ==============================================
-
-if __name__ == "__main__":
-    print('Iniciando processamento das matrizes históricas (Raiz)...')
-
-    #Bases de dados 
-    df_internacoes = processar_datasus_internacoes('./datasets/morbidade_hospitalar_sus/internacoes.csv')
-    df_permanencia = processar_datasus_dias_permanencia('./datasets/morbidade_hospitalar_sus/dias_permanencia.csv')
-    df_gini = processar_dataset_gini('./datasets/datasets_juntos/indice_gini.csv')
-    df_renda = processar_dataset_renda_capita('./datasets/datasets_juntos/renda_per_capita.csv')
-    df_pib = processar_dataset_pib('./datasets/datasets_juntos/pib_corrente.csv')
-    df_obitos_hospitalares = processar_datasus_obitos('./datasets/morbidade_hospitalar_sus/obitos_hospitalares.csv')
-    df_populacao = processar_dataset_populacao('./datasets/datasets_juntos/populacao_ibge.csv')
-    df_obitos_evitaveis = processar_datasus_obitos_evitaveis('./datasets/datasets_juntos/obitos_evitaveis_5_74.csv')
-    df_idhm = processar_dataset_idhm('./datasets/datasets_juntos/indice_desenvolvimento_humano.csv')
-
-    #caminhos dos arquivos de leitos
-    caminhos_leitos = {
-        'repouso_fem': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv',
-        'repouso_ind': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
-        'repouso_masc': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
-        'repouso_ped': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv',
-        'comp_nao_sus': './datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
-        'comp_sus': './datasets/datasus_cnes/leitos_complementares_sus.csv',
-        'enf_nao_sus': './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
-        'enf_sus': './datasets/datasus_cnes/leitos_enfermaria_sus.csv'
-    }
-
-    df_blocos_leitos = extrair_bloco_infraestrutura(caminhos_leitos)
-
-    print('Empilhando os dados para consolida-los')
-    dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares, df_populacao, df_obitos_evitaveis, df_idhm]
-    df_consolidado = reduce(
-        lambda esquerda, direita: pd.merge(
-            esquerda, 
-            direita, 
-            on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
-            how='left'
-        ), 
-        dfs
-    )
-
-    print('Juntando dados dos leitos ao dataset consolidado')
-    df_consolidado = pd.merge(df_consolidado, df_blocos_leitos, 
-                            on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
-                            how='left'
-                            )
-
-
-    print("\nTipos de Dados:")
-    print(df_consolidado.dtypes)
-    print("\nAmostra dos Dados Consolidados:")
-    print(df_consolidado.head())
-    print(df_consolidado.tail())
-
-    print(df_consolidado.info())
+dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares]
+df_consolidado = reduce(
+    lambda esquerda, direita: pd.merge(
+        esquerda, 
+        direita, 
+        on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
+        how='left'
+    ), 
+    dfs
+)
+print(df_consolidado.dtypes)
