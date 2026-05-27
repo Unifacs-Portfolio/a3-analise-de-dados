@@ -178,7 +178,8 @@ def processar_datasus_obitos_evitaveis(caminho_arquivo):
     ))
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     colunas_alvo = df.columns[1:]
-    df[colunas_alvo] = df[colunas_alvo].astype(int)
+    for col in colunas_alvo:
+        df[col] = pd.to_numeric(df[col].astype(str).str.replace('.', '', regex=False).str.replace('-', '0'), errors='coerce').fillna(0).astype(int)
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(
