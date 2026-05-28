@@ -245,7 +245,7 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
     return df_bloco
 
 
-# ISSO AQUI É SO PRA CASO QUERIA SO RODAR O ETL_LEITOS.PY PRA VER ESSAS TABELAS
+# ISSO AQUI É SO PRA CASO QUERIA SO RODAR O python ETL_LEITOS.PY PRA VER ESSAS TABELAS sem rodar o main.py
 if __name__ == "__main__": 
     #caminhos dos arquivos de leitos
     caminhos_leitos = {
