@@ -1,44 +1,215 @@
 import pandas as pd
 from functools import reduce
-from utils import remove_footer, split_id_name_unidade_federativa
+from utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
-def processar_leitos_mensais(caminho_arquivo, nome_valor):
-    df = remove_footer(pd.read_csv(
-        caminho_arquivo, 
-        encoding='latin1', 
-        sep=';', 
-        header=3
-    ))
-    
+# =====================================================================
+# FUNÇÕES DE ETL INDIVIDUAIS PARA CADA TIPO DE LEITO
+# =====================================================================
+
+def processar_leitos_repouso_feminino(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
     df = df.drop(columns=['Total'], errors='ignore')
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
-    df = df.melt(
-        id_vars=['id_unidade_federativa', 'nome_unidade_federativa'],
-        var_name='ano_mes',
-        value_name=nome_valor
-    )
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_repouso_fem')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df[nome_valor] = pd.to_numeric(df[nome_valor].replace('-', '0'), errors='coerce').fillna(0)
-    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], as_index=False)[nome_valor].mean()
-    df_agrupado[nome_valor] = df_agrupado[nome_valor].round().astype(int)
+    df['leitos_repouso_fem'] = pd.to_numeric(df['leitos_repouso_fem'], errors='coerce').fillna(0)
     
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_repouso_fem'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_repouso_fem',
+        'median': 'mediana_leitos_repouso_fem', 
+        'std': 'desvio_padrao_leitos_repouso_fem'
+        })
+    
+    df_agrupado['media_leitos_repouso_fem'] = df_agrupado['media_leitos_repouso_fem'].round().astype(int)
+    df_agrupado['mediana_leitos_repouso_fem'] = df_agrupado['mediana_leitos_repouso_fem'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_repouso_fem'] = df_agrupado['desvio_padrao_leitos_repouso_fem'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_repouso_masculino(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_repouso_masc')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_repouso_masc'] = pd.to_numeric(df['leitos_repouso_masc'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_repouso_masc'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_repouso_masc',
+        'median': 'mediana_leitos_repouso_masc', 
+        'std': 'desvio_padrao_leitos_repouso_masc'
+        })
+    
+    df_agrupado['media_leitos_repouso_masc'] = df_agrupado['media_leitos_repouso_masc'].round().astype(int)
+    df_agrupado['mediana_leitos_repouso_masc'] = df_agrupado['mediana_leitos_repouso_masc'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_repouso_masc'] = df_agrupado['desvio_padrao_leitos_repouso_masc'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_repouso_indiferente(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_repouso_ind')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_repouso_ind'] = pd.to_numeric(df['leitos_repouso_ind'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_repouso_ind'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_repouso_ind',
+        'median': 'mediana_leitos_repouso_ind', 
+        'std': 'desvio_padrao_leitos_repouso_ind'
+        })
+    
+    df_agrupado['media_leitos_repouso_ind'] = df_agrupado['media_leitos_repouso_ind'].round().astype(int)
+    df_agrupado['mediana_leitos_repouso_ind'] = df_agrupado['mediana_leitos_repouso_ind'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_repouso_ind'] = df_agrupado['desvio_padrao_leitos_repouso_ind'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_repouso_pediatria(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_repouso_ped')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_repouso_ped'] = pd.to_numeric(df['leitos_repouso_ped'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_repouso_ped'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_repouso_ped', 
+        'median': 'mediana_leitos_repouso_ped',
+        'std': 'desvio_padrao_leitos_repouso_ped'
+        })
+    
+    df_agrupado['media_leitos_repouso_ped'] = df_agrupado['media_leitos_repouso_ped'].round().astype(int)
+    df_agrupado['mediana_leitos_repouso_ped'] = df_agrupado['mediana_leitos_repouso_ped'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_repouso_ped'] = df_agrupado['desvio_padrao_leitos_repouso_ped'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_complementares_nao_sus(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_uti_nao_sus')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_uti_nao_sus'] = pd.to_numeric(df['leitos_uti_nao_sus'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_uti_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_uti_nao_sus',
+        'median': 'mediana_leitos_uti_nao_sus', 
+        'std': 'desvio_padrao_leitos_uti_nao_sus'
+        })
+    
+    df_agrupado['media_leitos_uti_nao_sus'] = df_agrupado['media_leitos_uti_nao_sus'].round().astype(int)
+    df_agrupado['mediana_leitos_uti_nao_sus'] = df_agrupado['mediana_leitos_uti_nao_sus'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_uti_nao_sus'] = df_agrupado['desvio_padrao_leitos_uti_nao_sus'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_complementares_sus(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_uti_sus')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_uti_sus'] = pd.to_numeric(df['leitos_uti_sus'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_uti_sus'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_uti_sus',
+        'median': 'mediana_leitos_uti_sus', 
+        'std': 'desvio_padrao_leitos_uti_sus'
+        })
+    
+    df_agrupado['media_leitos_uti_sus'] = df_agrupado['media_leitos_uti_sus'].round().astype(int)
+    df_agrupado['mediana_leitos_uti_sus'] = df_agrupado['mediana_leitos_uti_sus'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_uti_sus'] = df_agrupado['desvio_padrao_leitos_uti_sus'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_enfermaria_nao_sus(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_enf_nao_sus')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_enf_nao_sus'] = pd.to_numeric(df['leitos_enf_nao_sus'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_enf_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_enf_nao_sus', 
+        'median': 'mediana_leitos_enf_nao_sus',
+        'std': 'desvio_padrao_leitos_enf_nao_sus'
+        })
+    
+    df_agrupado['media_leitos_enf_nao_sus'] = df_agrupado['media_leitos_enf_nao_sus'].round().astype(int)
+    df_agrupado['mediana_leitos_enf_nao_sus'] = df_agrupado['mediana_leitos_enf_nao_sus'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_enf_nao_sus'] = df_agrupado['desvio_padrao_leitos_enf_nao_sus'].fillna(0).round(2)
+    return df_agrupado
+
+def processar_leitos_enfermaria_sus(caminho_arquivo):
+    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='leitos_enf_sus')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['leitos_enf_sus'] = pd.to_numeric(df['leitos_enf_sus'], errors='coerce').fillna(0)
+    
+    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['leitos_enf_sus'].agg(['mean', 'median', 'std']).reset_index()
+    
+    df_agrupado = df_agrupado.rename(columns={
+        'mean': 'media_leitos_enf_sus', 
+        'median': 'mediana_leitos_enf_sus',
+        'std': 'desvio_padrao_leitos_enf_sus'
+        })
+    
+    df_agrupado['media_leitos_enf_sus'] = df_agrupado['media_leitos_enf_sus'].round().astype(int)
+    df_agrupado['mediana_leitos_enf_sus'] = df_agrupado['mediana_leitos_enf_sus'].round().astype(int)
+    df_agrupado['desvio_padrao_leitos_enf_sus'] = df_agrupado['desvio_padrao_leitos_enf_sus'].fillna(0).round(2)
     return df_agrupado
 
 
-def extrair_bloco_infraestrutura(caminhos_arquivos):
+# =====================================================================
+# CONSOLIDAÇÃO DO BLOCO DE LEITOS
+# =====================================================================
 
+def extrair_bloco_infraestrutura(caminhos_arquivos):
     print('\n[Módulo ETL Leitos] Extraindo e processando infraestrutura...')
     
-    df_rep_fem = processar_leitos_mensais(caminhos_arquivos['repouso_fem'], 'leitos_repouso_fem')
-    df_rep_masc = processar_leitos_mensais(caminhos_arquivos['repouso_masc'], 'leitos_repouso_masc')
-    df_rep_ind = processar_leitos_mensais(caminhos_arquivos['repouso_ind'], 'leitos_repouso_ind')
-    df_rep_ped = processar_leitos_mensais(caminhos_arquivos['repouso_ped'], 'leitos_repouso_ped')
-    df_comp_nao_sus = processar_leitos_mensais(caminhos_arquivos['comp_nao_sus'], 'leitos_uti_nao_sus')
-    df_comp_sus = processar_leitos_mensais(caminhos_arquivos['comp_sus'], 'leitos_uti_sus')
-    df_enf_nao_sus = processar_leitos_mensais(caminhos_arquivos['enf_nao_sus'], 'leitos_enf_nao_sus')
-    df_enf_sus = processar_leitos_mensais(caminhos_arquivos['enf_sus'], 'leitos_enf_sus')
+    df_rep_fem = processar_leitos_repouso_feminino(caminhos_arquivos['repouso_fem'])
+    df_rep_masc = processar_leitos_repouso_masculino(caminhos_arquivos['repouso_masc'])
+    df_rep_ind = processar_leitos_repouso_indiferente(caminhos_arquivos['repouso_ind'])
+    df_rep_ped = processar_leitos_repouso_pediatria(caminhos_arquivos['repouso_ped'])
+    
+    df_comp_nao_sus = processar_leitos_complementares_nao_sus(caminhos_arquivos['comp_nao_sus'])
+    df_comp_sus = processar_leitos_complementares_sus(caminhos_arquivos['comp_sus'])
+    
+    df_enf_nao_sus = processar_leitos_enfermaria_nao_sus(caminhos_arquivos['enf_nao_sus'])
+    df_enf_sus = processar_leitos_enfermaria_sus(caminhos_arquivos['enf_sus'])
+
+    inspecionar_dados(df_rep_masc, 'dados masc')
 
     dfs_leitos = [
         df_rep_fem, df_rep_ind, df_rep_masc, df_rep_ped,
@@ -48,12 +219,47 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
     print('[Módulo ETL Leitos] Consolidando Bloco Físico...')
     df_bloco = reduce(
         lambda esquerda, direita: pd.merge(
-            esquerda, 
+            esquerda,                        
             direita, 
             on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
             how='outer'
             ), 
-        dfs_leitos
+        dfs_leitos 
     ).fillna(0)
+    
+    # ENGENHARIA DE FEATURES: Cálculo das Médias
+    df_bloco['media_total_leitos_repouso'] = df_bloco['media_leitos_repouso_fem'] + df_bloco['media_leitos_repouso_ind'] + df_bloco['media_leitos_repouso_masc'] + df_bloco['media_leitos_repouso_ped']
+    df_bloco['media_total_leitos_sus'] = df_bloco['media_leitos_uti_sus'] + df_bloco['media_leitos_enf_sus']
+    df_bloco['media_total_leitos_nao_sus'] = df_bloco['media_leitos_uti_nao_sus'] + df_bloco['media_leitos_enf_nao_sus']
+
+    # ENGENHARIA DE FEATURES: Cálculo das Medianas 
+    df_bloco['mediana_total_leitos_repouso'] = df_bloco['mediana_leitos_repouso_fem'] + df_bloco['mediana_leitos_repouso_ind'] + df_bloco['mediana_leitos_repouso_masc'] + df_bloco['mediana_leitos_repouso_ped']
+    df_bloco['mediana_total_leitos_sus'] = df_bloco['mediana_leitos_uti_sus'] + df_bloco['mediana_leitos_enf_sus']
+    df_bloco['mediana_total_leitos_nao_sus'] = df_bloco['mediana_leitos_uti_nao_sus'] + df_bloco['mediana_leitos_enf_nao_sus']
+
+    # ENGENHARIA DE FEATURES: Cálculo dos Desvios Padrão (Raiz Quadrada da Soma das Variâncias)
+    df_bloco['desvio_padrao_total_leitos_repouso'] = ((df_bloco['desvio_padrao_leitos_repouso_fem']**2 + df_bloco['desvio_padrao_leitos_repouso_ind']**2 + df_bloco['desvio_padrao_leitos_repouso_masc']**2 + df_bloco['desvio_padrao_leitos_repouso_ped']**2) ** 0.5).round(2)
+    df_bloco['desvio_padrao_total_leitos_sus'] = ((df_bloco['desvio_padrao_leitos_uti_sus']**2 + df_bloco['desvio_padrao_leitos_enf_sus']**2) ** 0.5).round(2)
+    df_bloco['desvio_padrao_total_leitos_nao_sus'] = ((df_bloco['desvio_padrao_leitos_uti_nao_sus']**2 + df_bloco['desvio_padrao_leitos_enf_nao_sus']**2) ** 0.5).round(2)
 
     return df_bloco
+
+
+# ISSO AQUI É SO PRA CASO QUERIA SO RODAR O ETL_LEITOS.PY PRA VER ESSAS TABELAS
+if __name__ == "__main__": 
+    #caminhos dos arquivos de leitos
+    caminhos_leitos = {
+        'repouso_fem': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv',
+        'repouso_ind': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
+        'repouso_masc': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
+        'repouso_ped': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv',
+
+        'comp_nao_sus': './datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
+        'comp_sus': './datasets/datasus_cnes/leitos_complementares_sus.csv',
+        'enf_nao_sus': './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
+        'enf_sus': './datasets/datasus_cnes/leitos_enfermaria_sus.csv'
+    }
+
+    df_blocos_leitos = extrair_bloco_infraestrutura(caminhos_leitos)
+
+    

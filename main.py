@@ -2,8 +2,9 @@ import pandas as pd
 import glob
 import os
 from functools import reduce
-from etl_leitos import extrair_bloco_infraestrutura
-from utils import remove_footer, split_id_name_unidade_federativa
+from etl_equipamentos import extrair_bloco_equipamentos, processar_equip_diagnostico_imagem, processar_equip_diagnostico_imagem_sus, processar_equip_manutencao_vida, processar_equip_manutencao_vida_sus, processar_equip_metodos_graficos, processar_equip_metodos_graficos_sus, processar_equip_totais, processar_equip_totais_sus
+from etl_leitos import extrair_bloco_infraestrutura, processar_leitos_complementares_nao_sus, processar_leitos_enfermaria_nao_sus, processar_leitos_complementares_sus, processar_leitos_enfermaria_sus, processar_leitos_repouso_feminino, processar_leitos_repouso_indiferente, processar_leitos_repouso_masculino, processar_leitos_repouso_pediatria
+from utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
 # =============================================
 # Função para processar os dados de internações
@@ -149,12 +150,16 @@ def processar_dataset_populacao(caminho_arquivo):
         encoding='latin1', 
         sep=';', 
         header=3,
-        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'] 
+        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'],
+        thousands='.', 
+        decimal=','
     ))
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     colunas_alvo = df.columns[1:]
+
     for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col].astype(str).str.replace('.', '', regex=False).str.replace('-', '0'), errors='coerce').fillna(0).astype(int)
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(
@@ -174,12 +179,17 @@ def processar_datasus_obitos_evitaveis(caminho_arquivo):
         encoding='latin1', 
         sep=';', 
         header=3,
-        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'] 
+        usecols=['Unidade da Federação', '2018', '2021', '2022', '2023'],
+        thousands='.', 
+        decimal=',',
+        na_values=['-', ' - ']
     ))
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     colunas_alvo = df.columns[1:]
+    
     for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col].astype(str).str.replace('.', '', regex=False).str.replace('-', '0'), errors='coerce').fillna(0).astype(int)
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(
@@ -199,11 +209,13 @@ def processar_dataset_idhm(caminho_arquivo):
         encoding='utf-8', 
         sep=',', 
         header=1,
-        usecols=['Código', 'Estado', '2018', '2021'] 
+        usecols=['Código', 'Estado', '2018', '2021'],
+        dtype={'Código': str}
     )
     df = df.rename(columns={'Código': 'id_unidade_federativa', 
                             'Estado': 'nome_unidade_federativa'})
-    df['id_unidade_federativa'] = pd.to_numeric(df['id_unidade_federativa'], errors='coerce').fillna(0).astype(int).astype(str).str.zfill(2)
+                            
+    df['id_unidade_federativa'] = df['id_unidade_federativa'].str.zfill(2)
     
     #Foward Fill
     df['2022'] = df['2021']
@@ -235,12 +247,35 @@ if __name__ == "__main__":
     df_obitos_evitaveis = processar_datasus_obitos_evitaveis('./datasets/datasets_juntos/obitos_evitaveis_5_74.csv')
     df_idhm = processar_dataset_idhm('./datasets/datasets_juntos/indice_desenvolvimento_humano.csv')
 
+    #Bases dos leitos para usar unitariamente
+    df_comp_sus = processar_leitos_complementares_sus('./datasets/datasus_cnes/leitos_complementares_sus.csv')
+    df_comp_nao_sus = processar_leitos_complementares_nao_sus('./datasets/datasus_cnes/leitos_complementares_nao_sus.csv')
+    df_enf_sus = processar_leitos_enfermaria_sus('./datasets/datasus_cnes/leitos_enfermaria_sus.csv')
+    df_enf_nao_sus = processar_leitos_enfermaria_nao_sus('./datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv')
+    df_rep_fem = processar_leitos_repouso_feminino('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv')
+    df_rep_masc = processar_leitos_repouso_masculino('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv')
+    df_rep_pedi = processar_leitos_repouso_pediatria('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv')
+    df_rep_indif = processar_leitos_repouso_indiferente('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv')
+
+    #Bases dos equipamentos para usar unitariamente
+    df_diag = processar_equip_diagnostico_imagem('./datasets/datasus_cnes/equipamentos/diagnostico_imagem_em_uso.csv')
+    df_diag_sus = processar_equip_diagnostico_imagem_sus('./datasets/datasus_cnes/equipamentos/somente_em_uso_sus/diagnostico_imagem_em_uso_sus.csv')
+    df_equip_totais = processar_equip_totais('./datasets/datasus_cnes/equipamentos/equipamentos_totais_em_uso.csv')
+    df_equip_totais_sus = processar_equip_totais_sus('./datasets/datasus_cnes/equipamentos/somente_em_uso_sus/equipamentos_totais_em_uso_sus.csv')
+    df_manu = processar_equip_manutencao_vida('./datasets/datasus_cnes/equipamentos/manutencao_vida_em_uso.csv')
+    df_manu_sus = processar_equip_manutencao_vida_sus('./datasets/datasus_cnes/equipamentos/somente_em_uso_sus/manutencao_vida_em_uso_sus.csv')
+    df_graf = processar_equip_metodos_graficos('./datasets/datasus_cnes/equipamentos/metodos_graficos_em_uso.csv')
+    df_graf_sus = processar_equip_metodos_graficos_sus('./datasets/datasus_cnes/equipamentos/somente_em_uso_sus/metodos_graficos_em_uso_sus.csv')
+
+    #inspecionar_dados(df_populacao, 'Dados de População')
+
     #caminhos dos arquivos de leitos
     caminhos_leitos = {
         'repouso_fem': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv',
         'repouso_ind': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
         'repouso_masc': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
         'repouso_ped': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv',
+
         'comp_nao_sus': './datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
         'comp_sus': './datasets/datasus_cnes/leitos_complementares_sus.csv',
         'enf_nao_sus': './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
@@ -249,8 +284,24 @@ if __name__ == "__main__":
 
     df_blocos_leitos = extrair_bloco_infraestrutura(caminhos_leitos)
 
+    # Caminhos dos arquivos de equipamentos
+    caminhos_equipamentos = {
+        'diag_imagem': './datasets/datasus_cnes/equipamentos/diagnostico_imagem_em_uso.csv',
+        'totais': './datasets/datasus_cnes/equipamentos/equipamentos_totais_em_uso.csv',
+        'manut_vida': './datasets/datasus_cnes/equipamentos/manutencao_vida_em_uso.csv',
+        'met_graficos': './datasets/datasus_cnes/equipamentos/metodos_graficos_em_uso.csv',
+        
+        'diag_imagem_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/diagnostico_imagem_em_uso_sus.csv',
+        'totais_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/equipamentos_totais_em_uso_sus.csv',
+        'manut_vida_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/manutencao_vida_em_uso_sus.csv',
+        'met_graficos_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/metodos_graficos_em_uso_sus.csv'
+    }
+
+    # Chama o módulo para processar os 8 datasets de equipamentos
+    df_blocos_equipamentos = extrair_bloco_equipamentos(caminhos_equipamentos)
+
     print('Empilhando os dados para consolida-los')
-    dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares, df_populacao, df_obitos_evitaveis, df_idhm]
+    dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares, df_populacao, df_obitos_evitaveis, df_idhm, df_enf_sus, df_enf_nao_sus]
     df_consolidado = reduce(
         lambda esquerda, direita: pd.merge(
             esquerda, 
@@ -261,17 +312,26 @@ if __name__ == "__main__":
         dfs
     )
 
-    print('Juntando dados dos leitos ao dataset consolidado')
-    df_consolidado = pd.merge(df_consolidado, df_blocos_leitos, 
-                            on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
-                            how='left'
-                            )
+    inspecionar_dados(df_consolidado, 'Dataset com internações masc e fem')
+
+  #  print('Juntando todos os dados dos leitos ao dataset consolidado')
+   # df_consolidado = pd.merge(df_consolidado, df_blocos_leitos, 
+    #                        on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
+     #                       how='left'
+       #                     )
 
 
-    print("\nTipos de Dados:")
-    print(df_consolidado.dtypes)
-    print("\nAmostra dos Dados Consolidados:")
-    print(df_consolidado.head())
-    print(df_consolidado.tail())
+      # print('Juntando dados dos equipamentos ao dataset consolidado...')
+   # df_consolidado = pd.merge(df_consolidado, df_blocos_equipamentos, 
+    #                        on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano'], 
+    #                        how='left'
+     #                       )
 
-    print(df_consolidado.info())
+   # inspecionar_dados(df_consolidado, 'Dataset com os leitos')
+    #print("\nTipos de Dados:")
+    #print(df_consolidado.dtypes)
+    #print("\nAmostra dos Dados Consolidados:")
+    #print(df_consolidado.head())
+    #print(df_consolidado.tail())
+
+    #print(df_consolidado.info())
