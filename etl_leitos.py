@@ -209,7 +209,6 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
     df_enf_nao_sus = processar_leitos_enfermaria_nao_sus(caminhos_arquivos['enf_nao_sus'])
     df_enf_sus = processar_leitos_enfermaria_sus(caminhos_arquivos['enf_sus'])
 
-    inspecionar_dados(df_rep_masc, 'dados masc')
 
     dfs_leitos = [
         df_rep_fem, df_rep_ind, df_rep_masc, df_rep_ped,

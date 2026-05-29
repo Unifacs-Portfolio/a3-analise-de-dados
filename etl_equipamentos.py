@@ -6,260 +6,187 @@ from utils import remove_footer, split_id_name_unidade_federativa, inspecionar_d
 # FUNÇÕES DIAGNÓSTICO POR IMAGEM
 # =====================================================================
 
-def processar_equip_diagnostico_imagem(caminho_total, caminho_sus):
-    # CSV ORIGINAL (NAO SUS)
-    df_total = remove_footer(pd.read_csv(caminho_total, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_total = df_total.drop(columns=['Total'], errors='ignore')
-    df_total = df_total.rename(columns={df_total.columns[0]: 'unidade_federativa'})
-    df_total = split_id_name_unidade_federativa(df_total, 'unidade_federativa')
-    df_total = df_total.drop(columns=['unidade_federativa'])
-    df_total = df_total.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_total')
-    df_total['equip_diag_imagem_total'] = pd.to_numeric(df_total['equip_diag_imagem_total'], errors='coerce').fillna(0)
+def processar_equip_diagnostico_imagem(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_total')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['equip_diag_imagem_total'] = pd.to_numeric(df['equip_diag_imagem_total'], errors='coerce').fillna(0).astype(int)
+    return df
 
-    # CSV SUS 
-    df_sus = remove_footer(pd.read_csv(caminho_sus, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_sus = df_sus.drop(columns=['Total'], errors='ignore')
-    df_sus = df_sus.rename(columns={df_sus.columns[0]: 'unidade_federativa'})
-    df_sus = split_id_name_unidade_federativa(df_sus, 'unidade_federativa')
-    df_sus = df_sus.drop(columns=['unidade_federativa'])
-    df_sus = df_sus.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_sus')
-    df_sus['equip_diag_imagem_sus'] = pd.to_numeric(df_sus['equip_diag_imagem_sus'], errors='coerce').fillna(0)
-
-    # Onde acontece a diferença entre os dois
-    df_par = pd.merge(df_total, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes'], how='inner')
-    df_par['equip_diag_imagem_nao_sus'] = df_par['equip_diag_imagem_total'] - df_par['equip_diag_imagem_sus']
-    df_par['ano'] = df_par['ano_mes'].str.split('/').str[0]
-
-    df_agrupado = df_par.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_diag_imagem_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_diag_imagem_nao_sus',
-        'median': 'mediana_equip_diag_imagem_nao_sus', 
-        'std': 'desvio_padrao_equip_diag_imagem_nao_sus'
-    })
-
-    df_agrupado['media_equip_diag_imagem_nao_sus'] = df_agrupado['media_equip_diag_imagem_nao_sus'].round().astype(int)
-    df_agrupado['mediana_equip_diag_imagem_nao_sus'] = df_agrupado['mediana_equip_diag_imagem_nao_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_diag_imagem_nao_sus'] = df_agrupado['desvio_padrao_equip_diag_imagem_nao_sus'].fillna(0).round(2)
-    return df_agrupado
-
-def processar_equip_diagnostico_imagem_sus(caminho_arquivo):
-    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+def processar_equip_diagnostico_imagem_sus(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
     df = df.drop(columns=['Total'], errors='ignore')
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_diag_imagem_sus'] = pd.to_numeric(df['equip_diag_imagem_sus'], errors='coerce').fillna(0)
-    
-    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_diag_imagem_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_diag_imagem_sus',
-        'median': 'mediana_equip_diag_imagem_sus', 
-        'std': 'desvio_padrao_equip_diag_imagem_sus'
-    })
-    
-    df_agrupado['media_equip_diag_imagem_sus'] = df_agrupado['media_equip_diag_imagem_sus'].round().astype(int)
-    df_agrupado['mediana_equip_diag_imagem_sus'] = df_agrupado['mediana_equip_diag_imagem_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_diag_imagem_sus'] = df_agrupado['desvio_padrao_equip_diag_imagem_sus'].fillna(0).round(2)
-    return df_agrupado
+    df['equip_diag_imagem_sus'] = pd.to_numeric(df['equip_diag_imagem_sus'], errors='coerce').fillna(0).astype(int)
+    return df
 
 
 # =====================================================================
 # FUNÇÕES EQUIPAMENTOS TOTAIS
 # =====================================================================
 
-def processar_equip_totais(caminho_total, caminho_sus):
-    # CSV ORIGINAL (NAO SUS)
-    df_total = remove_footer(pd.read_csv(caminho_total, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
-    df_total = df_total.drop(columns=['Total'], errors='ignore')
-    df_total = df_total.rename(columns={df_total.columns[0]: 'unidade_federativa'})
-    df_total = split_id_name_unidade_federativa(df_total, 'unidade_federativa')
-    df_total = df_total.drop(columns=['unidade_federativa'])
-    df_total = df_total.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_total')
-    df_total['equip_totais_total'] = pd.to_numeric(df_total['equip_totais_total'], errors='coerce').fillna(0)
+def processar_equip_totais(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_total')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['equip_totais_total'] = pd.to_numeric(df['equip_totais_total'], errors='coerce').fillna(0).astype(int)
+    return df
 
-    # CSV SUS
-    df_sus = remove_footer(pd.read_csv(caminho_sus, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
-    df_sus = df_sus.drop(columns=['Total'], errors='ignore')
-    df_sus = df_sus.rename(columns={df_sus.columns[0]: 'unidade_federativa'})
-    df_sus = split_id_name_unidade_federativa(df_sus, 'unidade_federativa')
-    df_sus = df_sus.drop(columns=['unidade_federativa'])
-    df_sus = df_sus.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_sus')
-    df_sus['equip_totais_sus'] = pd.to_numeric(df_sus['equip_totais_sus'], errors='coerce').fillna(0)
-
-    # Onde acontece a diferença entre os dois
-    df_par = pd.merge(df_total, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes'], how='inner')
-    df_par['equip_totais_nao_sus'] = df_par['equip_totais_total'] - df_par['equip_totais_sus']
-    df_par['ano'] = df_par['ano_mes'].str.split('/').str[0]
-
-    df_agrupado = df_par.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_totais_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_totais_nao_sus',
-        'median': 'mediana_equip_totais_nao_sus', 
-        'std': 'desvio_padrao_equip_totais_nao_sus'
-    })
-
-    df_agrupado['media_equip_totais_nao_sus'] = df_agrupado['media_equip_totais_nao_sus'].round().astype(int)
-    df_agrupado['mediana_equip_totais_nao_sus'] = df_agrupado['mediana_equip_totais_nao_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_totais_nao_sus'] = df_agrupado['desvio_padrao_equip_totais_nao_sus'].fillna(0).round(2)
-    return df_agrupado
-
-def processar_equip_totais_sus(caminho_arquivo):
-    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
+def processar_equip_totais_sus(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=3, na_values=['-', ' - ']))
     df = df.drop(columns=['Total'], errors='ignore')
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_totais_sus'] = pd.to_numeric(df['equip_totais_sus'], errors='coerce').fillna(0)
-    
-    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_totais_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_totais_sus',
-        'median': 'mediana_equip_totais_sus', 
-        'std': 'desvio_padrao_equip_totais_sus'
-    })
-    
-    df_agrupado['media_equip_totais_sus'] = df_agrupado['media_equip_totais_sus'].round().astype(int)
-    df_agrupado['mediana_equip_totais_sus'] = df_agrupado['mediana_equip_totais_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_totais_sus'] = df_agrupado['desvio_padrao_equip_totais_sus'].fillna(0).round(2)
-    return df_agrupado
-
+    df['equip_totais_sus'] = pd.to_numeric(df['equip_totais_sus'], errors='coerce').fillna(0).astype(int)
+    return df
 
 # =====================================================================
 # FUNÇÕES MANUTENÇÃO DA VIDA
 # =====================================================================
 
-def processar_equip_manutencao_vida(caminho_total, caminho_sus):
-    # CSV ORIGINAL (NAO SUS)
-    df_total = remove_footer(pd.read_csv(caminho_total, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_total = df_total.drop(columns=['Total'], errors='ignore')
-    df_total = df_total.rename(columns={df_total.columns[0]: 'unidade_federativa'})
-    df_total = split_id_name_unidade_federativa(df_total, 'unidade_federativa')
-    df_total = df_total.drop(columns=['unidade_federativa'])
-    df_total = df_total.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_total')
-    df_total['equip_manut_vida_total'] = pd.to_numeric(df_total['equip_manut_vida_total'], errors='coerce').fillna(0)
+def processar_equip_manutencao_vida(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_total')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['equip_manut_vida_total'] = pd.to_numeric(df['equip_manut_vida_total'], errors='coerce').fillna(0).astype(int)
+    return df
 
-    # CSV SUS
-    df_sus = remove_footer(pd.read_csv(caminho_sus, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_sus = df_sus.drop(columns=['Total'], errors='ignore')
-    df_sus = df_sus.rename(columns={df_sus.columns[0]: 'unidade_federativa'})
-    df_sus = split_id_name_unidade_federativa(df_sus, 'unidade_federativa')
-    df_sus = df_sus.drop(columns=['unidade_federativa'])
-    df_sus = df_sus.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_sus')
-    df_sus['equip_manut_vida_sus'] = pd.to_numeric(df_sus['equip_manut_vida_sus'], errors='coerce').fillna(0)
-
-    # Onde acontece a diferença entre os dois
-    df_par = pd.merge(df_total, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes'], how='inner')
-    df_par['equip_manut_vida_nao_sus'] = df_par['equip_manut_vida_total'] - df_par['equip_manut_vida_sus']
-    df_par['ano'] = df_par['ano_mes'].str.split('/').str[0]
-
-    df_agrupado = df_par.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_manut_vida_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_manut_vida_nao_sus',
-        'median': 'mediana_equip_manut_vida_nao_sus', 
-        'std': 'desvio_padrao_equip_manut_vida_nao_sus'
-    })
-
-    df_agrupado['media_equip_manut_vida_nao_sus'] = df_agrupado['media_equip_manut_vida_nao_sus'].round().astype(int)
-    df_agrupado['mediana_equip_manut_vida_nao_sus'] = df_agrupado['mediana_equip_manut_vida_nao_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_manut_vida_nao_sus'] = df_agrupado['desvio_padrao_equip_manut_vida_nao_sus'].fillna(0).round(2)
-    return df_agrupado
-
-def processar_equip_manutencao_vida_sus(caminho_arquivo):
-    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+def processar_equip_manutencao_vida_sus(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
     df = df.drop(columns=['Total'], errors='ignore')
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_manut_vida_sus'] = pd.to_numeric(df['equip_manut_vida_sus'], errors='coerce').fillna(0)
-    
-    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_manut_vida_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_manut_vida_sus',
-        'median': 'mediana_equip_manut_vida_sus', 
-        'std': 'desvio_padrao_equip_manut_vida_sus'
-    })
-    
-    df_agrupado['media_equip_manut_vida_sus'] = df_agrupado['media_equip_manut_vida_sus'].round().astype(int)
-    df_agrupado['mediana_equip_manut_vida_sus'] = df_agrupado['mediana_equip_manut_vida_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_manut_vida_sus'] = df_agrupado['desvio_padrao_equip_manut_vida_sus'].fillna(0).round(2)
-    return df_agrupado
+    df['equip_manut_vida_sus'] = pd.to_numeric(df['equip_manut_vida_sus'], errors='coerce').fillna(0).astype(int)
+    return df
 
 
 # =====================================================================
 # FUNÇÕES MÉTODOS GRÁFICOS
 # =====================================================================
 
-def processar_equip_metodos_graficos(caminho_total, caminho_sus):
-    # CSV ORIGINAL (NAO SUS)
-    df_total = remove_footer(pd.read_csv(caminho_total, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_total = df_total.drop(columns=['Total'], errors='ignore')
-    df_total = df_total.rename(columns={df_total.columns[0]: 'unidade_federativa'})
-    df_total = split_id_name_unidade_federativa(df_total, 'unidade_federativa')
-    df_total = df_total.drop(columns=['unidade_federativa'])
-    df_total = df_total.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_total')
-    df_total['equip_met_graficos_total'] = pd.to_numeric(df_total['equip_met_graficos_total'], errors='coerce').fillna(0)
+def processar_equip_metodos_graficos(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+    df = df.drop(columns=['Total'], errors='ignore')
+    df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
+    df = split_id_name_unidade_federativa(df, 'unidade_federativa')
+    df = df.drop(columns=['unidade_federativa'])
+    df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_total')
+    df['ano'] = df['ano_mes'].str.split('/').str[0]
+    df['equip_met_graficos_total'] = pd.to_numeric(df['equip_met_graficos_total'], errors='coerce').fillna(0).astype(int)
+    return df
 
-    # CSV SUS
-    df_sus = remove_footer(pd.read_csv(caminho_sus, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
-    df_sus = df_sus.drop(columns=['Total'], errors='ignore')
-    df_sus = df_sus.rename(columns={df_sus.columns[0]: 'unidade_federativa'})
-    df_sus = split_id_name_unidade_federativa(df_sus, 'unidade_federativa')
-    df_sus = df_sus.drop(columns=['unidade_federativa'])
-    df_sus = df_sus.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_sus')
-    df_sus['equip_met_graficos_sus'] = pd.to_numeric(df_sus['equip_met_graficos_sus'], errors='coerce').fillna(0)
-
-    # Onde acontece a diferença entre os dois
-    df_par = pd.merge(df_total, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes'], how='inner')
-    df_par['equip_met_graficos_nao_sus'] = df_par['equip_met_graficos_total'] - df_par['equip_met_graficos_sus']
-    df_par['ano'] = df_par['ano_mes'].str.split('/').str[0]
-
-    df_agrupado = df_par.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_met_graficos_nao_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_met_graficos_nao_sus',
-        'median': 'mediana_equip_met_graficos_nao_sus', 
-        'std': 'desvio_padrao_equip_met_graficos_nao_sus'
-    })
-
-    df_agrupado['media_equip_met_graficos_nao_sus'] = df_agrupado['media_equip_met_graficos_nao_sus'].round().astype(int)
-    df_agrupado['mediana_equip_met_graficos_nao_sus'] = df_agrupado['mediana_equip_met_graficos_nao_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_met_graficos_nao_sus'] = df_agrupado['desvio_padrao_equip_met_graficos_nao_sus'].fillna(0).round(2)
-    return df_agrupado
-
-def processar_equip_metodos_graficos_sus(caminho_arquivo):
-    df = remove_footer(pd.read_csv(caminho_arquivo, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
+def processar_equip_metodos_graficos_sus(caminho):
+    df = remove_footer(pd.read_csv(caminho, encoding='latin1', sep=';', header=4, na_values=['-', ' - ']))
     df = df.drop(columns=['Total'], errors='ignore')
     df = df.rename(columns={df.columns[0]: 'unidade_federativa'})
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_met_graficos_sus'] = pd.to_numeric(df['equip_met_graficos_sus'], errors='coerce').fillna(0)
+    df['equip_met_graficos_sus'] = pd.to_numeric(df['equip_met_graficos_sus'], errors='coerce').fillna(0).astype(int)
+    return df
+
+# =====================================================================
+# TRANSFORMAÇÃO ESTATÍSTICA
+# =====================================================================
+
+def aplicar_logica_estatistica(df, coluna_alvo):
+    df_agg = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])[coluna_alvo].agg(['mean', 'median', 'std']).reset_index()
     
-    df_agrupado = df.groupby(['id_unidade_federativa', 'nome_unidade_federativa', 'ano'])['equip_met_graficos_sus'].agg(['mean', 'median', 'std']).reset_index()
-    
-    df_agrupado = df_agrupado.rename(columns={
-        'mean': 'media_equip_met_graficos_sus',
-        'median': 'mediana_equip_met_graficos_sus', 
-        'std': 'desvio_padrao_equip_met_graficos_sus'
+    # Renomeia dinamicamente de acordo com a coluna que entrou
+    df_agg = df_agg.rename(columns={
+        'mean': f'media_{coluna_alvo}',
+        'median': f'mediana_{coluna_alvo}',
+        'std': f'desvio_padrao_{coluna_alvo}'
     })
+
+    # Tipagem e Arredondamento
+    df_agg[f'media_{coluna_alvo}'] = df_agg[f'media_{coluna_alvo}'].round().astype(int)
+    df_agg[f'mediana_{coluna_alvo}'] = df_agg[f'mediana_{coluna_alvo}'].round().astype(int)
+    df_agg[f'desvio_padrao_{coluna_alvo}'] = df_agg[f'desvio_padrao_{coluna_alvo}'].fillna(0).round(2)
+
+    return df_agg
+
+# =====================================================================
+#  MÓDULOS DE DOMÍNIO (Retornando as Variáveis Isoladas)
+# =====================================================================
+
+def obter_estatisticas_diagnostico_imagem(caminho_total, caminho_sus):
+    df_tot = processar_equip_diagnostico_imagem(caminho_total)
+    df_sus = processar_equip_diagnostico_imagem_sus(caminho_sus)
     
-    df_agrupado['media_equip_met_graficos_sus'] = df_agrupado['media_equip_met_graficos_sus'].round().astype(int)
-    df_agrupado['mediana_equip_met_graficos_sus'] = df_agrupado['mediana_equip_met_graficos_sus'].round().astype(int)
-    df_agrupado['desvio_padrao_equip_met_graficos_sus'] = df_agrupado['desvio_padrao_equip_met_graficos_sus'].fillna(0).round(2)
-    return df_agrupado
+    # Merge para achar a diferença mês a mês
+    df_par = pd.merge(df_tot, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    df_par['equip_diag_imagem_nao_sus'] = df_par['equip_diag_imagem_total'] - df_par['equip_diag_imagem_sus']
+
+    # TABELAS TOTALMENTE INDEPENDENTES E LIMPAS
+    df_est_total = aplicar_logica_estatistica(df_par, 'equip_diag_imagem_total')
+    df_est_sus = aplicar_logica_estatistica(df_par, 'equip_diag_imagem_sus')
+    df_est_nao_sus = aplicar_logica_estatistica(df_par, 'equip_diag_imagem_nao_sus')
+
+    return df_est_total, df_est_sus, df_est_nao_sus
+
+def obter_estatisticas_totais(caminho_total, caminho_sus):
+    df_tot = processar_equip_totais(caminho_total)
+    df_sus = processar_equip_totais_sus(caminho_sus)
+    
+    df_par = pd.merge(df_tot, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    df_par['equip_totais_nao_sus'] = df_par['equip_totais_total'] - df_par['equip_totais_sus']
+
+    df_est_total = aplicar_logica_estatistica(df_par, 'equip_totais_total')
+    df_est_sus = aplicar_logica_estatistica(df_par, 'equip_totais_sus')
+    df_est_nao_sus = aplicar_logica_estatistica(df_par, 'equip_totais_nao_sus')
+
+    return df_est_total, df_est_sus, df_est_nao_sus
+
+def obter_estatisticas_manutencao_vida(caminho_total, caminho_sus):
+    df_tot = processar_equip_manutencao_vida(caminho_total)
+    df_sus = processar_equip_manutencao_vida_sus(caminho_sus)
+    
+    df_par = pd.merge(df_tot, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    df_par['equip_manut_vida_nao_sus'] = df_par['equip_manut_vida_total'] - df_par['equip_manut_vida_sus']
+
+    df_est_total = aplicar_logica_estatistica(df_par, 'equip_manut_vida_total')
+    df_est_sus = aplicar_logica_estatistica(df_par, 'equip_manut_vida_sus')
+    df_est_nao_sus = aplicar_logica_estatistica(df_par, 'equip_manut_vida_nao_sus')
+
+    return df_est_total, df_est_sus, df_est_nao_sus
+
+def obter_estatisticas_metodos_graficos(caminho_total, caminho_sus):
+    df_tot = processar_equip_metodos_graficos(caminho_total)
+    df_sus = processar_equip_metodos_graficos_sus(caminho_sus)
+    
+    df_par = pd.merge(df_tot, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    df_par['equip_met_graficos_nao_sus'] = df_par['equip_met_graficos_total'] - df_par['equip_met_graficos_sus']
+
+    df_est_total = aplicar_logica_estatistica(df_par, 'equip_met_graficos_total')
+    df_est_sus = aplicar_logica_estatistica(df_par, 'equip_met_graficos_sus')
+    df_est_nao_sus = aplicar_logica_estatistica(df_par, 'equip_met_graficos_nao_sus')
+
+    return df_est_total, df_est_sus, df_est_nao_sus
+
 
 # =====================================================================
 # CONSOLIDAÇÃO DO BLOCO DE EQUIPAMENTOS
@@ -269,27 +196,21 @@ def extrair_bloco_equipamentos(caminhos_arquivos):
 
     print('\n[Módulo ETL Equipamentos] Extraindo e processando tecnologia hospitalar...')
     
-    # As funções que puxavam o Total agora recebem os dois caminhos como argumento!
-    df_diag_total = processar_equip_diagnostico_imagem(caminhos_arquivos['diag_imagem'], caminhos_arquivos['diag_imagem_sus'])
-    df_diag_sus = processar_equip_diagnostico_imagem_sus(caminhos_arquivos['diag_imagem_sus'])
-    
-    df_totais_total = processar_equip_totais(caminhos_arquivos['totais'], caminhos_arquivos['totais_sus'])
-    df_totais_sus = processar_equip_totais_sus(caminhos_arquivos['totais_sus'])
-    
-    df_vida_total = processar_equip_manutencao_vida(caminhos_arquivos['manut_vida'], caminhos_arquivos['manut_vida_sus'])
-    df_vida_sus = processar_equip_manutencao_vida_sus(caminhos_arquivos['manut_vida_sus'])
-    
-    df_graf_total = processar_equip_metodos_graficos(caminhos_arquivos['met_graficos'], caminhos_arquivos['met_graficos_sus'])
-    df_graf_sus = processar_equip_metodos_graficos_sus(caminhos_arquivos['met_graficos_sus'])
+    # As funções mandam os dados pro obter_estatisticas e la na função de obter_estatistica ele limpa e aplica o calculo
+    df_diag_total, df_diag_sus, df_diag_nao_sus = obter_estatisticas_diagnostico_imagem(caminhos_arquivos['diag_imagem'], caminhos_arquivos['diag_imagem_sus'])
+    df_totais_total, df_totais_sus, df_totais_nao_sus = obter_estatisticas_totais(caminhos_arquivos['totais'], caminhos_arquivos['totais_sus'])
+    df_vida_total, df_vida_sus, df_vida_nao_sus = obter_estatisticas_manutencao_vida(caminhos_arquivos['manut_vida'], caminhos_arquivos['manut_vida_sus'])
+    df_graf_total, df_graf_sus, df_graf_nao_sus = obter_estatisticas_metodos_graficos(caminhos_arquivos['met_graficos'], caminhos_arquivos['met_graficos_sus'])
 
-    inspecionar_dados(df_graf_sus, "dataset sus")
-    inspecionar_dados(df_graf_total, "dataset nao sus e total")
+    #inspecionar_dados(df_totais_sus, "dataset sus")
+    #inspecionar_dados(df_totais_total, "dataset total")
+    #inspecionar_dados(df_totais_nao_sus, "dataset nao sus")
 
     dfs_equipamentos = [
-        df_diag_total, df_diag_sus,
-        df_totais_total, df_totais_sus,
-        df_vida_total, df_vida_sus,
-        df_graf_total, df_graf_sus
+        df_diag_total, df_diag_sus, df_diag_nao_sus,
+        df_totais_total, df_totais_sus, df_totais_nao_sus,
+        df_vida_total, df_vida_sus, df_vida_nao_sus,
+        df_graf_total, df_graf_sus, df_graf_nao_sus
     ]
 
     print('[Módulo ETL Equipamentos] Consolidando Bloco Tecnológico...')
