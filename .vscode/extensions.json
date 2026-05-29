@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-toolsai.datawrangler",
+        "ms-python.vscode-pylance",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs",
+        "charliermarsh.ruff"
+    ]
+}
