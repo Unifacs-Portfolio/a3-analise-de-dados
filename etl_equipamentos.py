@@ -14,7 +14,7 @@ def processar_equip_diagnostico_imagem(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_total')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_diag_imagem_total'] = pd.to_numeric(df['equip_diag_imagem_total'], errors='coerce').fillna(0).astype(int)
+    df['equip_diag_imagem_total'] = pd.to_numeric(df['equip_diag_imagem_total'], errors='coerce').astype(int)
     return df
 
 def processar_equip_diagnostico_imagem_sus(caminho):
@@ -25,7 +25,7 @@ def processar_equip_diagnostico_imagem_sus(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_diag_imagem_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_diag_imagem_sus'] = pd.to_numeric(df['equip_diag_imagem_sus'], errors='coerce').fillna(0).astype(int)
+    df['equip_diag_imagem_sus'] = pd.to_numeric(df['equip_diag_imagem_sus'], errors='coerce').astype(int)
     return df
 
 
@@ -41,7 +41,7 @@ def processar_equip_totais(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_total')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_totais_total'] = pd.to_numeric(df['equip_totais_total'], errors='coerce').fillna(0).astype(int)
+    df['equip_totais_total'] = pd.to_numeric(df['equip_totais_total'], errors='coerce').astype(int)
     return df
 
 def processar_equip_totais_sus(caminho):
@@ -52,7 +52,7 @@ def processar_equip_totais_sus(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_totais_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_totais_sus'] = pd.to_numeric(df['equip_totais_sus'], errors='coerce').fillna(0).astype(int)
+    df['equip_totais_sus'] = pd.to_numeric(df['equip_totais_sus'], errors='coerce').astype(int)
     return df
 
 # =====================================================================
@@ -67,7 +67,7 @@ def processar_equip_manutencao_vida(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_total')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_manut_vida_total'] = pd.to_numeric(df['equip_manut_vida_total'], errors='coerce').fillna(0).astype(int)
+    df['equip_manut_vida_total'] = pd.to_numeric(df['equip_manut_vida_total'], errors='coerce').astype(int)
     return df
 
 def processar_equip_manutencao_vida_sus(caminho):
@@ -78,7 +78,7 @@ def processar_equip_manutencao_vida_sus(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_manut_vida_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_manut_vida_sus'] = pd.to_numeric(df['equip_manut_vida_sus'], errors='coerce').fillna(0).astype(int)
+    df['equip_manut_vida_sus'] = pd.to_numeric(df['equip_manut_vida_sus'], errors='coerce').astype(int)
     return df
 
 
@@ -94,7 +94,7 @@ def processar_equip_metodos_graficos(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_total')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_met_graficos_total'] = pd.to_numeric(df['equip_met_graficos_total'], errors='coerce').fillna(0).astype(int)
+    df['equip_met_graficos_total'] = pd.to_numeric(df['equip_met_graficos_total'], errors='coerce').astype(int)
     return df
 
 def processar_equip_metodos_graficos_sus(caminho):
@@ -105,7 +105,7 @@ def processar_equip_metodos_graficos_sus(caminho):
     df = df.drop(columns=['unidade_federativa'])
     df = df.melt(id_vars=['id_unidade_federativa', 'nome_unidade_federativa'], var_name='ano_mes', value_name='equip_met_graficos_sus')
     df['ano'] = df['ano_mes'].str.split('/').str[0]
-    df['equip_met_graficos_sus'] = pd.to_numeric(df['equip_met_graficos_sus'], errors='coerce').fillna(0).astype(int)
+    df['equip_met_graficos_sus'] = pd.to_numeric(df['equip_met_graficos_sus'], errors='coerce').astype(int)
     return df
 
 # =====================================================================
