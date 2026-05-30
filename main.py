@@ -387,7 +387,17 @@ if __name__ == "__main__":
     df_blocos_equipamentos = extrair_bloco_equipamentos(caminhos_equipamentos)
 
     print("Empilhando os dados para consolida-los")
-    dfs = [df_gini, df_rep_fem]
+    dfs = [
+        df_internacoes,
+        df_permanencia,
+        df_gini,
+        df_renda,
+        df_pib,
+        df_obitos_hospitalares,
+        df_populacao,
+        df_obitos_evitaveis,
+        df_idhm,
+    ]
     df_consolidado = reduce(
         lambda esquerda, direita: pd.merge(
             esquerda,
