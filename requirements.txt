@@ -1,5 +1,4 @@
 basedosdados
 pandas
-gdown==5.1.0
 seaborn
 matplotlib

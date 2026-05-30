@@ -3,85 +3,86 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # =========================
-# CONFIG
+# CONFIGURAÇÃO
 # =========================
-sns.set(style='whitegrid')
+sns.set_theme(style='whitegrid', palette='muted')
 
-print('\nCarregando base consolidada histórica...')
-# Lendo a nova base mestre gerada pelo main.py
+print('\nCarregando Tabela Mestra...')
 df = pd.read_csv('./datasets/base_consolidada_saude_historico.csv')
-
-# Convertendo 'ano' para string/categoria para os gráficos não acharem que é um número matemático
 df['ano'] = df['ano'].astype(str)
 
-# =========================
-# LIMPEZA E TRATAMENTO
-# =========================
-df = df[df['populacao'] > 1000]
-df = df.dropna(subset=['taxa_mortalidade_evitavel', 'pib_per_capita', 'perc_cobertura_saude'])
+# Limpeza de outliers nulos ou zerados
+df = df[df['taxa_mortalidade_evitavel_100k'] > 0]
 
 # =========================
-# 1. EVOLUÇÃO TEMPORAL (GRÁFICO NOVO)
+# 1. A LINHA DO TEMPO (A Prova do Represamento)
 # =========================
 plt.figure(figsize=(10, 5))
-# O pointplot vai desenhar uma linha do tempo mostrando a média nacional
-sns.pointplot(data=df, x='ano', y='taxa_mortalidade_evitavel', color='red', markers="o")
-plt.title('Evolução da Taxa Média de Mortalidade Evitável no Brasil (2018 a 2022)')
-plt.ylabel('Taxa por 100k hab.')
+sns.lineplot(data=df, x='ano', y='taxa_mortalidade_evitavel_100k', marker='o', color='darkred', errorbar=None, linewidth=2)
+plt.title('A Fatura da Pandemia: Evolução da Mortalidade Evitável (Brasil)', fontsize=14, weight='bold')
+plt.ylabel('Óbitos Evitáveis (por 100 mil hab.)')
 plt.xlabel('Ano')
+plt.tight_layout()
 plt.show()
 
 # =========================
-# 2. DISTRIBUIÇÕES COMPARATIVAS
+# 2. A CAUSA RAIZ: DESIGUALDADE vs PRESSÃO NO POSTO DE SAÚDE
 # =========================
-plt.figure(figsize=(12, 5))
+print('Gerando gráfico de Desigualdade vs ICSAP...')
 
-# Usamos kdeplot (curvas de densidade) com hue='ano' para ver os morrinhos se sobrepondo
-plt.subplot(1, 2, 1)
-sns.kdeplot(data=df, x='taxa_mortalidade_evitavel', hue='ano', fill=True, common_norm=False, palette='Set1')
-plt.title('Distribuição da Mortalidade Evitável por Ano')
+# O HACK DA VÍRGULA: Força o Índice de Gini a virar número matemático contínuo
+df['indice_gini'] = df['indice_gini'].astype(str).str.replace(',', '.').astype(float)
+df['taxa_icsap_100k'] = df['taxa_icsap_100k'].astype(float)
 
-plt.subplot(1, 2, 2)
-sns.kdeplot(data=df, x='pib_per_capita', hue='ano', fill=True, common_norm=False, palette='Set1')
-plt.title('Distribuição do PIB per capita por Ano')
-plt.xscale('log')
+# Cria a figura um pouco mais larga para dar respiro aos dados
+plt.figure(figsize=(12, 7))
+
+# Cria o gráfico de dispersão com bolhas maiores e bordas brancas para dar contraste
+sns.scatterplot(data=df, x='indice_gini', y='taxa_icsap_100k', 
+                hue='ano', palette='viridis', s=120, alpha=0.8, edgecolor='white')
+
+# Adiciona uma linha de tendência pontilhada (Regressão Linear) para provar a correlação
+sns.regplot(data=df, x='indice_gini', y='taxa_icsap_100k', 
+            scatter=False, color='gray', line_kws={'linestyle':'--', 'alpha': 0.6})
+
+plt.title('A Raiz do Problema: Desigualdade (Gini) vs Pressão na Atenção Primária (ICSAP)', fontsize=15, weight='bold')
+plt.xlabel('Índice de Gini (Maior = Mais Desigualdade)', fontsize=12)
+plt.ylabel('Taxa de Internações Evitáveis (ICSAP por 100k hab.)', fontsize=12)
+
+# Ajusta as legendas e a grade
+plt.legend(title='Ano', fontsize=11, title_fontsize=12, bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, linestyle=':', alpha=0.7)
 
 plt.tight_layout()
 plt.show()
 
 # =========================
-# 3. RELAÇÕES PRINCIPAIS (COM EVOLUÇÃO)
+# 3. O COLAPSO HOSPITALAR: GARGALO vs MORTALIDADE
 # =========================
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-# Trocamos o regplot por scatterplot com hue para ver como os municípios se moveram no gráfico
-sns.scatterplot(x='pib_per_capita', y='taxa_mortalidade_evitavel', hue='ano', data=df, 
-                alpha=0.4, palette='Set1', ax=ax1)
-ax1.set_title('PIB per capita vs Mortalidade (Comparativo Anual)')
-ax1.set_xscale('log')
-
-sns.scatterplot(x='perc_cobertura_saude', y='taxa_mortalidade_evitavel', hue='ano', data=df, 
-                alpha=0.4, palette='Set1', ax=ax2)
-ax2.set_title('Cobertura de Saúde vs Mortalidade (Comparativo Anual)')
-
+plt.figure(figsize=(10, 6))
+sns.regplot(data=df, x='tempo_medio_permanencia', y='taxa_mortalidade_evitavel_100k', 
+            scatter_kws={'alpha':0.5, 'color':'gray'}, line_kws={'color':'red'})
+plt.title('O Gargalo: Como a Saturação de Leitos Reflete na Mortalidade', fontsize=14, weight='bold')
+plt.xlabel('Tempo Médio de Permanência (Dias travando o Leito)')
+plt.ylabel('Taxa de Mortalidade Evitável')
 plt.tight_layout()
 plt.show()
 
 # =========================
-# 4. ANÁLISE POR QUINTIL DE RENDA (NOVO MÉTODO)
+# 4. ANÁLISE DE QUADRANTES (O GRÁFICO DEFINITIVO DA APRESENTAÇÃO)
 # =========================
-print('\nAnalisando impacto da renda na mortalidade...')
+print('\nGerando Quadrantes de Vulnerabilidade...')
 
-# Como temos anos diferentes, calculamos os quintis para CADA ANO separadamente
-df['nivel_renda'] = df.groupby('ano')['pib_per_capita'].transform(
-    lambda x: pd.qcut(x, 5, labels=['Muito Pobre', 'Pobre', 'Média', 'Rica', 'Muito Rica'])
-)
+# Divide os Estados em grupos de Poder de Compra
+df['nivel_renda'] = pd.qcut(df['renda_media'], q=4, labels=['Baixa Renda', 'Renda Média-Baixa', 'Renda Média-Alta', 'Alta Renda'])
 
 plt.figure(figsize=(12, 6))
-# Gráfico de barras agrupado por ano
-sns.barplot(x='nivel_renda', y='taxa_mortalidade_evitavel', hue='ano', data=df, palette='viridis')
-plt.title('Mortalidade Evitável por Nível de Renda (Comparativo 2018-2022)')
-plt.ylabel('Taxa por 100k hab.')
+sns.barplot(data=df, x='nivel_renda', y='taxa_mortalidade_evitavel_100k', hue='ano', palette='Reds')
+plt.title('Sobrecarga do SUS: A Mortalidade é Menor Onde a População Pode Pagar Rede Privada?', fontsize=14, weight='bold')
+plt.xlabel('Quartis de Renda Média Domiciliar')
+plt.ylabel('Mortalidade Evitável por 100k hab.')
+plt.legend(title='Ano', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
 plt.show()
 
-print('\nEDA Temporal finalizado! A história agora está completa.')
+print('\nAnálise Exploratória Concluída! Gráficos prontos para a apresentação.')
