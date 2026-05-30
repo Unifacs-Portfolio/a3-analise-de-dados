@@ -1,7 +1,7 @@
 import pandas as pd
 from functools import reduce
 from etls.etl_equipamentos import extrair_bloco_equipamentos, obter_estatisticas_diagnostico_imagem, obter_estatisticas_manutencao_vida, obter_estatisticas_metodos_graficos, obter_estatisticas_totais
-from etls.etl_leitos import extrair_bloco_infraestrutura, processar_leitos_complementares_nao_sus, processar_leitos_enfermaria_nao_sus, processar_leitos_complementares_sus, processar_leitos_enfermaria_sus, processar_leitos_repouso_feminino, processar_leitos_repouso_indiferente, processar_leitos_repouso_masculino, processar_leitos_repouso_pediatria
+from etls.etl_leitos import extrair_bloco_infraestrutura, obter_estatisticas_internacao_nao_sus, obter_estatisticas_internacao_sus, obter_estatisticas_repouso
 from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
 # =============================================
@@ -207,13 +207,12 @@ def processar_dataset_idhm(caminho_arquivo):
         encoding='utf-8', 
         sep=',', 
         header=1,
-        usecols=['Código', 'Estado', '2018', '2021'],
-        dtype={'Código': str}
+        usecols=['Código', 'Estado', '2018', '2021']
     )
     df = df.rename(columns={'Código': 'id_unidade_federativa', 
                             'Estado': 'nome_unidade_federativa'})
                             
-    df['id_unidade_federativa'] = df['id_unidade_federativa'].astype(int).astype(str)
+    df['id_unidade_federativa'] = df['id_unidade_federativa'].astype(str)
     
     #Foward Fill
     df['2022'] = df['2021']
@@ -247,14 +246,16 @@ if __name__ == "__main__":
 
 
     #Bases dos leitos para usar unitariamente
-    df_comp_sus = processar_leitos_complementares_sus('./datasets/datasus_cnes/leitos_complementares_sus.csv')
-    df_comp_nao_sus = processar_leitos_complementares_nao_sus('./datasets/datasus_cnes/leitos_complementares_nao_sus.csv')
-    df_enf_sus = processar_leitos_enfermaria_sus('./datasets/datasus_cnes/leitos_enfermaria_sus.csv')
-    df_enf_nao_sus = processar_leitos_enfermaria_nao_sus('./datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv')
-    df_rep_fem = processar_leitos_repouso_feminino('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv')
-    df_rep_masc = processar_leitos_repouso_masculino('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv')
-    df_rep_pedi = processar_leitos_repouso_pediatria('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv')
-    df_rep_indif = processar_leitos_repouso_indiferente('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv')
+    df_rep_fem, df_rep_masc, df_rep_ind, df_rep_ped, df_rep_tot = obter_estatisticas_repouso('./datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv', 
+                                                                                                './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
+                                                                                                './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
+                                                                                                './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv')
+    
+    df_uti_nao_sus, df_enf_nao_sus, df_int_nao_sus = obter_estatisticas_internacao_nao_sus('./datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
+                                                                                            './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv')
+    
+    df_uti_sus, df_enf_sus, df_int_sus = obter_estatisticas_internacao_sus('./datasets/datasus_cnes/leitos_complementares_sus.csv',
+                                                                            './datasets/datasus_cnes/leitos_enfermaria_sus.csv')
 
     #Bases dos equipamentos para usar unitariamente
     # DIAGNÓSTICO POR IMAGEM
@@ -312,7 +313,7 @@ if __name__ == "__main__":
     df_blocos_equipamentos = extrair_bloco_equipamentos(caminhos_equipamentos)
 
     print('Empilhando os dados para consolida-los')
-    dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares, df_populacao, df_obitos_evitaveis, df_idhm, df_graf_nao_sus]
+    dfs = [df_permanencia, df_gini, df_renda, df_pib, df_internacoes, df_obitos_hospitalares, df_populacao, df_obitos_evitaveis, df_idhm, df_rep_fem]
     df_consolidado = reduce(
         lambda esquerda, direita: pd.merge(
             esquerda, 
@@ -323,7 +324,7 @@ if __name__ == "__main__":
         dfs
     )
 
-    inspecionar_dados(df_consolidado, "dados consolidados com metodos graficos nao sus")
+    inspecionar_dados(df_consolidado, "dados consolidados")
 
 
   #  print('Juntando todos os dados dos leitos ao dataset consolidado')

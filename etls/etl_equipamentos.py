@@ -123,8 +123,8 @@ def aplicar_logica_estatistica(df, coluna_alvo):
     })
 
     # Tipagem e Arredondamento
-    df_agg[f'media_{coluna_alvo}'] = df_agg[f'media_{coluna_alvo}'].round().astype(int)
-    df_agg[f'mediana_{coluna_alvo}'] = df_agg[f'mediana_{coluna_alvo}'].round().astype(int)
+    df_agg[f'media_{coluna_alvo}'] = df_agg[f'media_{coluna_alvo}'].round(2)
+    df_agg[f'mediana_{coluna_alvo}'] = df_agg[f'mediana_{coluna_alvo}'].astype(int)
     df_agg[f'desvio_padrao_{coluna_alvo}'] = df_agg[f'desvio_padrao_{coluna_alvo}'].round(2)
 
     return df_agg
