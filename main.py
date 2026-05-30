@@ -1,6 +1,4 @@
 import pandas as pd
-import glob
-import os
 from functools import reduce
 from etl_equipamentos import extrair_bloco_equipamentos, obter_estatisticas_diagnostico_imagem, obter_estatisticas_manutencao_vida, obter_estatisticas_metodos_graficos, obter_estatisticas_totais
 from etl_leitos import extrair_bloco_infraestrutura, processar_leitos_complementares_nao_sus, processar_leitos_enfermaria_nao_sus, processar_leitos_complementares_sus, processar_leitos_enfermaria_sus, processar_leitos_repouso_feminino, processar_leitos_repouso_indiferente, processar_leitos_repouso_masculino, processar_leitos_repouso_pediatria
@@ -158,7 +156,7 @@ def processar_dataset_populacao(caminho_arquivo):
     colunas_alvo = df.columns[1:]
 
     for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        df[col] = df[col].astype(int)
         
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
@@ -188,7 +186,7 @@ def processar_datasus_obitos_evitaveis(caminho_arquivo):
     colunas_alvo = df.columns[1:]
     
     for col in colunas_alvo:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        df[col] = df[col].astype(int)
         
     df = split_id_name_unidade_federativa(df, 'unidade_federativa')
     df = df.drop(columns=['unidade_federativa'])
@@ -215,7 +213,7 @@ def processar_dataset_idhm(caminho_arquivo):
     df = df.rename(columns={'Código': 'id_unidade_federativa', 
                             'Estado': 'nome_unidade_federativa'})
                             
-    df['id_unidade_federativa'] = pd.to_numeric(df['id_unidade_federativa'], errors='coerce').fillna(0).astype(int).astype(str)
+    df['id_unidade_federativa'] = df['id_unidade_federativa'].astype(int).astype(str)
     
     #Foward Fill
     df['2022'] = df['2021']

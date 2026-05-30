@@ -125,7 +125,7 @@ def aplicar_logica_estatistica(df, coluna_alvo):
     # Tipagem e Arredondamento
     df_agg[f'media_{coluna_alvo}'] = df_agg[f'media_{coluna_alvo}'].round().astype(int)
     df_agg[f'mediana_{coluna_alvo}'] = df_agg[f'mediana_{coluna_alvo}'].round().astype(int)
-    df_agg[f'desvio_padrao_{coluna_alvo}'] = df_agg[f'desvio_padrao_{coluna_alvo}'].fillna(0).round(2)
+    df_agg[f'desvio_padrao_{coluna_alvo}'] = df_agg[f'desvio_padrao_{coluna_alvo}'].round(2)
 
     return df_agg
 
@@ -202,9 +202,9 @@ def extrair_bloco_equipamentos(caminhos_arquivos):
     df_vida_total, df_vida_sus, df_vida_nao_sus = obter_estatisticas_manutencao_vida(caminhos_arquivos['manut_vida'], caminhos_arquivos['manut_vida_sus'])
     df_graf_total, df_graf_sus, df_graf_nao_sus = obter_estatisticas_metodos_graficos(caminhos_arquivos['met_graficos'], caminhos_arquivos['met_graficos_sus'])
 
-    #inspecionar_dados(df_totais_sus, "dataset sus")
-    #inspecionar_dados(df_totais_total, "dataset total")
-    #inspecionar_dados(df_totais_nao_sus, "dataset nao sus")
+    inspecionar_dados(df_totais_sus, "dataset sus")
+    inspecionar_dados(df_totais_total, "dataset total")
+    inspecionar_dados(df_totais_nao_sus, "dataset nao sus")
 
     dfs_equipamentos = [
         df_diag_total, df_diag_sus, df_diag_nao_sus,
