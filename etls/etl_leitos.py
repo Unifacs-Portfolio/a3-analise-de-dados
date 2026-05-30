@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 from functools import reduce
 from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
@@ -141,35 +145,35 @@ def obter_estatisticas_repouso(caminho_fem, caminho_masc, caminho_ind, caminho_p
 
     return est_fem, est_masc, est_ind, est_ped, est_tot
 
-def obter_estatisticas_internacao_nao_sus(caminho_uti, caminho_enf):
-    df_uti = processar_leitos_complementares_nao_sus(caminho_uti)
-    df_enf = processar_leitos_enfermaria_nao_sus(caminho_enf)
+def obter_estatisticas_uti(caminho_nao_sus, caminho_sus):
+    df_nao_sus = processar_leitos_complementares_nao_sus(caminho_nao_sus)
+    df_sus = processar_leitos_complementares_sus(caminho_sus)
 
-    df_par = pd.merge(df_uti, df_enf, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    df_par = pd.merge(df_nao_sus, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
     
-    # Resolvendo o problema de nomenclatura
-    df_par['leitos_internacao_nao_sus'] = df_par['leitos_uti_nao_sus'] + df_par['leitos_enf_nao_sus']
+    # UTI tratada isoladamente! Calculamos o Total de UTIs (SUS + Não-SUS)
+    df_par['leitos_uti_total'] = df_par['leitos_uti_nao_sus'] + df_par['leitos_uti_sus']
 
-    est_uti = aplicar_logica_estatistica(df_par, 'leitos_uti_nao_sus')
-    est_enf = aplicar_logica_estatistica(df_par, 'leitos_enf_nao_sus')
-    est_tot = aplicar_logica_estatistica(df_par, 'leitos_internacao_nao_sus')
-
-    return est_uti, est_enf, est_tot
-
-def obter_estatisticas_internacao_sus(caminho_uti, caminho_enf):
-    df_uti = processar_leitos_complementares_sus(caminho_uti)
-    df_enf = processar_leitos_enfermaria_sus(caminho_enf)
-
-    df_par = pd.merge(df_uti, df_enf, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    est_tot = aplicar_logica_estatistica(df_par, 'leitos_uti_total')
+    est_sus = aplicar_logica_estatistica(df_par, 'leitos_uti_sus')
+    est_nao_sus = aplicar_logica_estatistica(df_par, 'leitos_uti_nao_sus')
     
-    # Resolvendo o problema de nomenclatura 
-    df_par['leitos_internacao_sus'] = df_par['leitos_uti_sus'] + df_par['leitos_enf_sus']
+    return est_tot, est_sus, est_nao_sus
 
-    est_uti = aplicar_logica_estatistica(df_par, 'leitos_uti_sus')
-    est_enf = aplicar_logica_estatistica(df_par, 'leitos_enf_sus')
-    est_tot = aplicar_logica_estatistica(df_par, 'leitos_internacao_sus')
+def obter_estatisticas_enfermaria(caminho_nao_sus, caminho_sus):
+    df_nao_sus = processar_leitos_enfermaria_nao_sus(caminho_nao_sus)
+    df_sus = processar_leitos_enfermaria_sus(caminho_sus)
 
-    return est_uti, est_enf, est_tot
+    df_par = pd.merge(df_nao_sus, df_sus, on=['id_unidade_federativa', 'nome_unidade_federativa', 'ano_mes', 'ano'], how='inner')
+    
+    # Enfermaria tratada isoladamente! Calculamos o Total de Enfermarias (SUS + Não-SUS)
+    df_par['leitos_enf_total'] = df_par['leitos_enf_nao_sus'] + df_par['leitos_enf_sus']
+
+    est_tot = aplicar_logica_estatistica(df_par, 'leitos_enf_total')
+    est_sus = aplicar_logica_estatistica(df_par, 'leitos_enf_sus')
+    est_nao_sus = aplicar_logica_estatistica(df_par, 'leitos_enf_nao_sus')
+
+    return est_tot, est_sus, est_nao_sus
 
 
 # =====================================================================
@@ -186,21 +190,22 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
         caminhos_arquivos['repouso_ped']
     )
     
-    df_uti_nao_sus, df_enf_nao_sus, df_int_nao_sus = obter_estatisticas_internacao_nao_sus(
+    df_uti_total, df_uti_sus, df_uti_nao_sus = obter_estatisticas_uti(
         caminhos_arquivos['comp_nao_sus'],
-        caminhos_arquivos['enf_nao_sus']
+        caminhos_arquivos['comp_sus']
     )
     
-    df_uti_sus, df_enf_sus, df_int_sus = obter_estatisticas_internacao_sus(
-        caminhos_arquivos['comp_sus'],
+    df_enf_total, df_enf_sus, df_enf_nao_sus = obter_estatisticas_enfermaria(
+        caminhos_arquivos['enf_nao_sus'],
         caminhos_arquivos['enf_sus']
     )
-
     dfs_leitos = [
         df_rep_fem, df_rep_masc, df_rep_ind, df_rep_ped, df_rep_tot,
-        df_uti_nao_sus, df_enf_nao_sus, df_int_nao_sus,
-        df_uti_sus, df_enf_sus, df_int_sus
+        df_uti_nao_sus, df_enf_nao_sus, df_enf_total,
+        df_uti_sus, df_enf_sus, df_uti_total
     ]
+
+    
 
     print('[Módulo ETL Leitos] Consolidando Bloco Físico...')
     df_bloco = reduce(
@@ -211,19 +216,20 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
     return df_bloco
 
 
+
 # ISSO AQUI É SO PRA CASO QUERIA SO RODAR O python ETL_LEITOS.PY PRA VER ESSAS TABELAS sem rodar o main.py
 if __name__ == "__main__": 
     #caminhos dos arquivos de leitos
     caminhos_leitos = {
-        'repouso_fem': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv',
-        'repouso_ind': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
-        'repouso_masc': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
-        'repouso_ped': './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv',
+        'repouso_fem': '../datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_feminino.csv',
+        'repouso_ind': '../datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
+        'repouso_masc': '../datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_masculino.csv',
+        'repouso_ped': '../datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv',
 
-        'comp_nao_sus': './datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
-        'comp_sus': './datasets/datasus_cnes/leitos_complementares_sus.csv',
-        'enf_nao_sus': './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
-        'enf_sus': './datasets/datasus_cnes/leitos_enfermaria_sus.csv'
+        'comp_nao_sus': '../datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
+        'comp_sus': '../datasets/datasus_cnes/leitos_complementares_sus.csv',
+        'enf_nao_sus': '../datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
+        'enf_sus': '../datasets/datasus_cnes/leitos_enfermaria_sus.csv'
     }
 
     df_blocos_leitos = extrair_bloco_infraestrutura(caminhos_leitos)

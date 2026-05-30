@@ -1,7 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 from functools import reduce
 from etls.etl_equipamentos import extrair_bloco_equipamentos, obter_estatisticas_diagnostico_imagem, obter_estatisticas_manutencao_vida, obter_estatisticas_metodos_graficos, obter_estatisticas_totais
-from etls.etl_leitos import extrair_bloco_infraestrutura, obter_estatisticas_internacao_nao_sus, obter_estatisticas_internacao_sus, obter_estatisticas_repouso
+from etls.etl_leitos import extrair_bloco_infraestrutura, obter_estatisticas_repouso, obter_estatisticas_enfermaria, obter_estatisticas_uti
 from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
 # =============================================
@@ -251,11 +255,11 @@ if __name__ == "__main__":
                                                                                                 './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_indiferente.csv',
                                                                                                 './datasets/datasus_cnes/leitos_urgencia/leitos_repouso_observacao_pediatria.csv')
     
-    df_uti_nao_sus, df_enf_nao_sus, df_int_nao_sus = obter_estatisticas_internacao_nao_sus('./datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
-                                                                                            './datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv')
+    df_uti_total, df_uti_sus, df_uti_nao_sus = obter_estatisticas_uti('./datasets/datasus_cnes/leitos_complementares_nao_sus.csv',
+                                                                            './datasets/datasus_cnes/leitos_complementares_sus.csv')
     
-    df_uti_sus, df_enf_sus, df_int_sus = obter_estatisticas_internacao_sus('./datasets/datasus_cnes/leitos_complementares_sus.csv',
-                                                                            './datasets/datasus_cnes/leitos_enfermaria_sus.csv')
+    df_enf_total, df_enf_sus, df_enf_nao_sus = obter_estatisticas_enfermaria('./datasets/datasus_cnes/leitos_enfermaria_nao_sus.csv',
+                                                                        './datasets/datasus_cnes/leitos_enfermaria_sus.csv')
 
     #Bases dos equipamentos para usar unitariamente
     # DIAGNÓSTICO POR IMAGEM
@@ -308,6 +312,13 @@ if __name__ == "__main__":
         'manut_vida_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/manutencao_vida_em_uso_sus.csv',
         'met_graficos_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/metodos_graficos_em_uso_sus.csv'
     }
+
+    inspecionar_dados(df_uti_total, "total uti")
+    inspecionar_dados(df_uti_sus, "sus uti")
+    inspecionar_dados(df_uti_nao_sus, "nao sus uti")
+    inspecionar_dados(df_enf_total, "enfermaria toal")
+    inspecionar_dados(df_enf_sus, "enfermaria sus")
+    inspecionar_dados(df_enf_nao_sus, "enfermaria nao sus")
 
     # Chama o módulo para processar os 8 datasets de equipamentos
     df_blocos_equipamentos = extrair_bloco_equipamentos(caminhos_equipamentos)

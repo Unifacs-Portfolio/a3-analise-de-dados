@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 from functools import reduce
 from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
@@ -231,15 +235,15 @@ def extrair_bloco_equipamentos(caminhos_arquivos):
 if __name__ == "__main__":
 
     caminhos_equipamentos = {
-        'diag_imagem': './datasets/datasus_cnes/equipamentos/diagnostico_imagem_em_uso.csv',
-        'totais': './datasets/datasus_cnes/equipamentos/equipamentos_totais_em_uso.csv',
-        'manut_vida': './datasets/datasus_cnes/equipamentos/manutencao_vida_em_uso.csv',
-        'met_graficos': './datasets/datasus_cnes/equipamentos/metodos_graficos_em_uso.csv',
+        'diag_imagem': '../datasets/datasus_cnes/equipamentos/diagnostico_imagem_em_uso.csv',
+        'totais': '../datasets/datasus_cnes/equipamentos/equipamentos_totais_em_uso.csv',
+        'manut_vida': '../datasets/datasus_cnes/equipamentos/manutencao_vida_em_uso.csv',
+        'met_graficos': '../datasets/datasus_cnes/equipamentos/metodos_graficos_em_uso.csv',
         
-        'diag_imagem_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/diagnostico_imagem_em_uso_sus.csv',
-        'totais_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/equipamentos_totais_em_uso_sus.csv',
-        'manut_vida_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/manutencao_vida_em_uso_sus.csv',
-        'met_graficos_sus': './datasets/datasus_cnes/equipamentos/somente_em_uso_sus/metodos_graficos_em_uso_sus.csv'
+        'diag_imagem_sus': '../datasets/datasus_cnes/equipamentos/somente_em_uso_sus/diagnostico_imagem_em_uso_sus.csv',
+        'totais_sus': '../datasets/datasus_cnes/equipamentos/somente_em_uso_sus/equipamentos_totais_em_uso_sus.csv',
+        'manut_vida_sus': '../datasets/datasus_cnes/equipamentos/somente_em_uso_sus/manutencao_vida_em_uso_sus.csv',
+        'met_graficos_sus': '../datasets/datasus_cnes/equipamentos/somente_em_uso_sus/metodos_graficos_em_uso_sus.csv'
     }
 
     # Chama o módulo para processar os 8 datasets de equipamentos
