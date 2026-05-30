@@ -1,6 +1,6 @@
 import pandas as pd
 from functools import reduce
-from utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
+from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
 # =====================================================================
 # FUNÇÕES DE ETL INDIVIDUAIS PARA CADA TIPO DE LEITO

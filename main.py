@@ -1,8 +1,8 @@
 import pandas as pd
 from functools import reduce
-from etl_equipamentos import extrair_bloco_equipamentos, obter_estatisticas_diagnostico_imagem, obter_estatisticas_manutencao_vida, obter_estatisticas_metodos_graficos, obter_estatisticas_totais
-from etl_leitos import extrair_bloco_infraestrutura, processar_leitos_complementares_nao_sus, processar_leitos_enfermaria_nao_sus, processar_leitos_complementares_sus, processar_leitos_enfermaria_sus, processar_leitos_repouso_feminino, processar_leitos_repouso_indiferente, processar_leitos_repouso_masculino, processar_leitos_repouso_pediatria
-from utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
+from etls.etl_equipamentos import extrair_bloco_equipamentos, obter_estatisticas_diagnostico_imagem, obter_estatisticas_manutencao_vida, obter_estatisticas_metodos_graficos, obter_estatisticas_totais
+from etls.etl_leitos import extrair_bloco_infraestrutura, processar_leitos_complementares_nao_sus, processar_leitos_enfermaria_nao_sus, processar_leitos_complementares_sus, processar_leitos_enfermaria_sus, processar_leitos_repouso_feminino, processar_leitos_repouso_indiferente, processar_leitos_repouso_masculino, processar_leitos_repouso_pediatria
+from utils.utils import remove_footer, split_id_name_unidade_federativa, inspecionar_dados
 
 # =============================================
 # Função para processar os dados de internações
