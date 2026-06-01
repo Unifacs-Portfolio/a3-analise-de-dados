@@ -8,52 +8,76 @@ import seaborn as sns
 sns.set_theme(style="whitegrid", palette="muted")
 
 print("\nCarregando Tabela Mestra...")
-df = pd.read_csv("./datasets/base_consolidada_saude_historico.csv")
+
+df = pd.read_csv("./datasets/dataset_completo_consolidado.csv")
+
+# =========================
+# LIMPEZA
+# =========================
+
 df["ano"] = df["ano"].astype(str)
 
-# Limpeza de outliers nulos ou zerados
-df = df[df["taxa_mortalidade_evitavel_100k"] > 0]
+df["indice_gini"] = (
+    df["indice_gini"].astype(str).str.replace(",", ".", regex=False).astype(float)
+)
+
+colunas_numericas = [
+    "obitos_evitaveis",
+    "renda_per_capita",
+    "media_leitos_uti_sus",
+    "media_equip_manut_vida_sus",
+]
+
+for col in colunas_numericas:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+df = df.dropna()
+
+df = df[df["obitos_evitaveis"] > 0]
 
 # =========================
-# 1. A LINHA DO TEMPO (A Prova do Represamento)
+# 1. EVOLUÇÃO DOS ÓBITOS EVITÁVEIS
 # =========================
+
+print("\nGerando evolução temporal...")
+
+evolucao = df.groupby("ano")["obitos_evitaveis"].sum().reset_index()
+
 plt.figure(figsize=(10, 5))
+
 sns.lineplot(
-    data=df,
+    data=evolucao,
     x="ano",
-    y="taxa_mortalidade_evitavel_100k",
+    y="obitos_evitaveis",
     marker="o",
     color="darkred",
-    errorbar=None,
     linewidth=2,
 )
+
 plt.title(
-    "A Fatura da Pandemia: Evolução da Mortalidade Evitável (Brasil)",
+    "Evolução dos Óbitos Evitáveis no Brasil",
     fontsize=14,
     weight="bold",
 )
-plt.ylabel("Óbitos Evitáveis (por 100 mil hab.)")
+
+plt.ylabel("Óbitos Evitáveis")
 plt.xlabel("Ano")
+
 plt.tight_layout()
 plt.show()
 
 # =========================
-# 2. A CAUSA RAIZ: DESIGUALDADE vs PRESSÃO NO POSTO DE SAÚDE
+# 2. DESIGUALDADE VS ÓBITOS EVITÁVEIS
 # =========================
-print("Gerando gráfico de Desigualdade vs ICSAP...")
 
-# O HACK DA VÍRGULA: Força o Índice de Gini a virar número matemático contínuo
-df["indice_gini"] = df["indice_gini"].astype(str).str.replace(",", ".").astype(float)
-df["taxa_icsap_100k"] = df["taxa_icsap_100k"].astype(float)
+print("\nGerando gráfico de Desigualdade vs Mortalidade...")
 
-# Cria a figura um pouco mais larga para dar respiro aos dados
 plt.figure(figsize=(12, 7))
 
-# Cria o gráfico de dispersão com bolhas maiores e bordas brancas para dar contraste
 sns.scatterplot(
     data=df,
     x="indice_gini",
-    y="taxa_icsap_100k",
+    y="obitos_evitaveis",
     hue="ano",
     palette="viridis",
     s=120,
@@ -61,87 +85,126 @@ sns.scatterplot(
     edgecolor="white",
 )
 
-# Adiciona uma linha de tendência pontilhada (Regressão Linear) para provar a correlação
 sns.regplot(
     data=df,
     x="indice_gini",
-    y="taxa_icsap_100k",
+    y="obitos_evitaveis",
     scatter=False,
     color="gray",
-    line_kws={"linestyle": "--", "alpha": 0.6},
+    line_kws={
+        "linestyle": "--",
+        "alpha": 0.6,
+    },
 )
 
 plt.title(
-    "A Raiz do Problema: Desigualdade (Gini) vs Pressão na Atenção Primária (ICSAP)",
+    "Desigualdade e Óbitos Evitáveis",
     fontsize=15,
     weight="bold",
 )
-plt.xlabel("Índice de Gini (Maior = Mais Desigualdade)", fontsize=12)
-plt.ylabel("Taxa de Internações Evitáveis (ICSAP por 100k hab.)", fontsize=12)
 
-# Ajusta as legendas e a grade
+plt.xlabel("Índice de Gini")
+plt.ylabel("Óbitos Evitáveis")
+
 plt.legend(
     title="Ano",
-    fontsize=11,
-    title_fontsize=12,
     bbox_to_anchor=(1.05, 1),
     loc="upper left",
 )
+
 plt.grid(True, linestyle=":", alpha=0.7)
 
 plt.tight_layout()
 plt.show()
 
 # =========================
-# 3. O COLAPSO HOSPITALAR: GARGALO vs MORTALIDADE
+# 3. INFRAESTRUTURA HOSPITALAR VS MORTALIDADE
 # =========================
+
+print("\nGerando gráfico de UTI vs Mortalidade...")
+
 plt.figure(figsize=(10, 6))
+
 sns.regplot(
     data=df,
-    x="tempo_medio_permanencia",
-    y="taxa_mortalidade_evitavel_100k",
-    scatter_kws={"alpha": 0.5, "color": "gray"},
+    x="media_leitos_uti_sus",
+    y="obitos_evitaveis",
+    scatter_kws={"alpha": 0.6, "color": "gray"},
     line_kws={"color": "red"},
 )
+
 plt.title(
-    "O Gargalo: Como a Saturação de Leitos Reflete na Mortalidade",
+    "Leitos de UTI SUS e Óbitos Evitáveis",
     fontsize=14,
     weight="bold",
 )
-plt.xlabel("Tempo Médio de Permanência (Dias travando o Leito)")
-plt.ylabel("Taxa de Mortalidade Evitável")
+
+plt.xlabel("Média de Leitos UTI SUS")
+plt.ylabel("Óbitos Evitáveis")
+
 plt.tight_layout()
 plt.show()
 
 # =========================
-# 4. ANÁLISE DE QUADRANTES (O GRÁFICO DEFINITIVO DA APRESENTAÇÃO)
+# 4. EQUIPAMENTOS CRÍTICOS VS MORTALIDADE
 # =========================
-print("\nGerando Quadrantes de Vulnerabilidade...")
 
-# Divide os Estados em grupos de Poder de Compra
+print("\nGerando gráfico de Equipamentos vs Mortalidade...")
+
+plt.figure(figsize=(10, 6))
+
+sns.regplot(
+    data=df,
+    x="media_equip_manut_vida_sus",
+    y="obitos_evitaveis",
+    scatter_kws={"alpha": 0.6, "color": "gray"},
+    line_kws={"color": "darkred"},
+)
+
+plt.title(
+    "Equipamentos de Manutenção da Vida e Óbitos Evitáveis",
+    fontsize=14,
+    weight="bold",
+)
+
+plt.xlabel("Equipamentos SUS de Manutenção da Vida")
+plt.ylabel("Óbitos Evitáveis")
+
+plt.tight_layout()
+plt.show()
+
+# =========================
+# 5. QUARTIS DE RENDA
+# =========================
+
+print("\nGerando análise por renda...")
+
 df["nivel_renda"] = pd.qcut(
-    df["renda_media"],
-    q=4,
-    labels=["Baixa Renda", "Renda Média-Baixa", "Renda Média-Alta", "Alta Renda"],
+    df["renda_per_capita"], q=4, labels=["Baixa", "Média-Baixa", "Média-Alta", "Alta"]
 )
 
 plt.figure(figsize=(12, 6))
+
 sns.barplot(
     data=df,
     x="nivel_renda",
-    y="taxa_mortalidade_evitavel_100k",
+    y="obitos_evitaveis",
     hue="ano",
     palette="Reds",
 )
+
 plt.title(
-    "Sobrecarga do SUS: A Mortalidade é Menor Onde a População Pode Pagar Rede Privada?",
+    "Renda Per Capita e Óbitos Evitáveis",
     fontsize=14,
     weight="bold",
 )
-plt.xlabel("Quartis de Renda Média Domiciliar")
-plt.ylabel("Mortalidade Evitável por 100k hab.")
+
+plt.xlabel("Quartis de Renda")
+plt.ylabel("Óbitos Evitáveis")
+
 plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
+
 plt.tight_layout()
 plt.show()
 
-# print('\nAnálise Exploratória Concluída! Gráficos prontos para a apresentação.')
+print("\nAnálise Exploratória Concluída!")
