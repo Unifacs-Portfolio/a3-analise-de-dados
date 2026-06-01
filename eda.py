@@ -220,6 +220,7 @@ plt.show()
 
 # 7. IDHM VS TAXA DE EVITABILIDADE (% DE MORTES EVITÁVEIS)
 plt.figure(figsize=(10, 6))
+
 sns.scatterplot(
     data=df,
     x="idhm",
@@ -229,9 +230,24 @@ sns.scatterplot(
     s=100,
     alpha=0.8,
 )
+
+sns.regplot(
+    data=df,
+    x="idhm",
+    y="pct_mortes_evitaveis",
+    scatter=False,
+    color="gray",
+    line_kws={
+        "linestyle": "--",
+        "alpha": 0.7,
+        "linewidth": 2,
+    },
+)
+
 plt.title("IDHM vs Proporção de Mortes Evitáveis", fontsize=14, weight="bold")
 plt.xlabel("IDHM (Índice de Desenvolvimento Humano)")
 plt.ylabel("% de Óbitos que eram Evitáveis")
+
 plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.grid(True, linestyle=":", alpha=0.7)
 plt.tight_layout()
@@ -260,6 +276,61 @@ plt.title(
 )
 plt.xlabel("Ano")
 plt.ylabel("Unidade Federativa")
+plt.tight_layout()
+plt.show()
+
+# 9. MATRIZ DE CORRELAÇÃO GLOBAL (Métricas Socioeconômicas vs Saúde)
+
+print("A gerar o Mapa de Correlação Linear...")
+
+colunas_corr = [
+    "taxa_obitos_100k",
+    "indice_gini",
+    "idhm",
+    "pib_per_capita_absoluto",
+    "pct_uti_sus",
+    "pct_mortes_evitaveis",
+    "dias_por_internacao",
+    "media_equip_manut_vida_sus",
+]
+
+matriz_correlacao = df[colunas_corr].corr()
+
+nomes_amigaveis = {
+    "taxa_obitos_100k": "Taxa Óbitos (100k)",
+    "indice_gini": "Índice de Gini",
+    "idhm": "IDHM",
+    "pib_per_capita_absoluto": "PIB per Capita",
+    "pct_uti_sus": "% UTI SUS",
+    "pct_mortes_evitaveis": "% Mortes Evitáveis",
+    "dias_por_internacao": "Dias por Internação",
+    "media_equip_manut_vida_sus": "Equipamentos SUS",
+}
+
+matriz_correlacao = matriz_correlacao.rename(
+    index=nomes_amigaveis, columns=nomes_amigaveis
+)
+
+plt.figure(figsize=(11, 9))
+
+sns.heatmap(
+    matriz_correlacao,
+    cmap="coolwarm",
+    vmin=-1,
+    vmax=1,
+    annot=True,
+    fmt=".2f",
+    linewidths=0.5,
+    square=True,
+)
+
+plt.title(
+    "Matriz de Correlação entre Indicadores Sócioeconômicos e de Saúde",
+    fontsize=14,
+    weight="bold",
+    pad=20,
+)
+
 plt.tight_layout()
 plt.show()
 
