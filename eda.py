@@ -334,4 +334,140 @@ plt.title(
 plt.tight_layout()
 plt.show()
 
+# ==============================================================================
+# PARTE IV: ANÁLISE VISUAL DE INFRAESTRUTURA (LEITOS E EQUIPAMENTOS CRÍTICOS)
+# ==============================================================================
+print("A gerar gráficos estruturais de Infraestrutura...")
+
+# Agrupamento e preparação de dados por UF ordenados pela taxa de óbitos
+df_uf_infra = (
+    df.groupby("nome_unidade_federativa")[
+        [
+            "taxa_obitos_100k",
+            "media_leitos_uti_sus",
+            "media_leitos_uti_nao_sus",
+            "media_equip_manut_vida_sus",
+        ]
+    ]
+    .mean()
+    .sort_values(by="taxa_obitos_100k", ascending=True)
+    .reset_index()
+)
+
+# 10. COMPARAÇÃO REGIONAL: DISTRIBUIÇÃO DE LEITOS UTI (SUS VS NÃO-SUS)
+df_melted_leitos = df_uf_infra.melt(
+    id_vars=["nome_unidade_federativa", "taxa_obitos_100k"],
+    value_vars=["media_leitos_uti_sus", "media_leitos_uti_nao_sus"],
+    var_name="Tipo de Leito",
+    value_name="Quantidade Média de Leitos",
+)
+
+df_melted_leitos["Tipo de Leito"] = df_melted_leitos["Tipo de Leito"].map(
+    {
+        "media_leitos_uti_sus": "Leitos UTI SUS",
+        "media_leitos_uti_nao_sus": "Leitos UTI Não-SUS",
+    }
+)
+
+plt.figure(figsize=(14, 10))
+sns.barplot(
+    data=df_melted_leitos,
+    y="nome_unidade_federativa",
+    x="Quantidade Média de Leitos",
+    hue="Tipo de Leito",
+    palette=["#008080", "#E67E22"],  # Teal para SUS, Coral/Laranja para Não-SUS
+    edgecolor="black",
+    alpha=0.85,
+)
+
+plt.title(
+    "Disponibilidade Média de Leitos de UTI (SUS vs Não-SUS) por Unidade Federativa\n"
+    "(Ordenado de forma crescente pela Taxa de Óbitos)",
+    fontsize=14,
+    weight="bold",
+    pad=15,
+)
+plt.ylabel("Unidade Federativa")
+plt.xlabel("Capacidade Média de Leitos Hospitalares (Unidades)")
+plt.legend(title="Segmento Hospitalar", loc="lower right")
+plt.grid(True, linestyle=":", alpha=0.6)
+plt.tight_layout()
+plt.show()
+
+
+# 11. PANORAMA TEMPORAL: EXPANSÃO DE INFRAESTRUTURA VS TAXA DE ÓBITOS EVITÁVEIS
+evolucao_infra = (
+    df.groupby("ano")[
+        [
+            "taxa_obitos_100k",
+            "media_leitos_uti_sus",
+            "media_leitos_uti_nao_sus",
+            "media_equip_manut_vida_sus",
+        ]
+    ]
+    .mean()
+    .reset_index()
+)
+
+fig, ax1 = plt.subplots(figsize=(13, 6))
+
+ax1.plot(
+    evolucao_infra["ano"],
+    evolucao_infra["media_leitos_uti_sus"],
+    marker="s",
+    color="#008080",
+    linewidth=2.5,
+    label="Média Leitos UTI SUS",
+)
+ax1.plot(
+    evolucao_infra["ano"],
+    evolucao_infra["media_leitos_uti_nao_sus"],
+    marker="^",
+    color="#E67E22",
+    linewidth=2.5,
+    label="Média Leitos UTI Não-SUS",
+)
+ax1.plot(
+    evolucao_infra["ano"],
+    evolucao_infra["media_equip_manut_vida_sus"],
+    marker="x",
+    color="#7F8C8D",
+    linestyle=":",
+    linewidth=2,
+    label="Média Equipamentos SUS",
+)
+
+ax1.set_xlabel("Ano", fontsize=11)
+ax1.set_ylabel(
+    "Volume de Infraestrutura Hospitalar (Média por Estado)",
+    color="black",
+    fontsize=11,
+)
+ax1.tick_params(axis="y", labelcolor="black")
+ax1.legend(loc="upper left")
+ax1.grid(True, linestyle=":", alpha=0.5)
+
+ax2 = ax1.twinx()
+ax2.plot(
+    evolucao_infra["ano"],
+    evolucao_infra["taxa_obitos_100k"],
+    marker="o",
+    color="darkred",
+    linewidth=3,
+    linestyle="-.",
+    label="Taxa Óbitos/100k",
+)
+ax2.set_ylabel("Taxa de Óbitos Evitáveis (por 100k hab.)", color="darkred", fontsize=11)
+ax2.tick_params(axis="y", labelcolor="darkred")
+ax2.legend(loc="upper right")
+
+plt.title(
+    "Evolução Histórica Nacional: Expansão de Infraestrutura vs Redução de Mortalidade",
+    fontsize=14,
+    weight="bold",
+    pad=15,
+)
+fig.tight_layout()
+plt.show()
+
 print("\nAnálise Exploratória Completa Finalizada!")
