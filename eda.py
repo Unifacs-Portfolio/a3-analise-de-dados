@@ -1,210 +1,266 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
-# =========================
-# CONFIGURAÇÃO
-# =========================
+# ==============================================================================
+# CONFIGURAÇÃO VISUAL
+# ==============================================================================
 sns.set_theme(style="whitegrid", palette="muted")
 
-print("\nCarregando Tabela Mestra...")
-
+print("\nA carregar a Tabela Mestra...")
 df = pd.read_csv("./datasets/dataset_completo_consolidado.csv")
 
-# =========================
-# LIMPEZA
-# =========================
-
+# ==============================================================================
+# LIMPEZA E PREPARAÇÃO DOS DADOS
+# ==============================================================================
 df["ano"] = df["ano"].astype(str)
 
+# Corrigir o formato do Gini (tratamento de strings com vírgula)
 df["indice_gini"] = (
     df["indice_gini"].astype(str).str.replace(",", ".", regex=False).astype(float)
 )
 
+# Colunas necessárias para todas as análises
 colunas_numericas = [
     "obitos_evitaveis",
     "renda_per_capita",
     "media_leitos_uti_sus",
     "media_equip_manut_vida_sus",
+    "populacao",
+    "media_leitos_uti_nao_sus",
+    "obitos_hospitalares",
+    "dias_internacao",
+    "internacoes",
+    "idhm",
+    "pib_milhares",
 ]
 
 for col in colunas_numericas:
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
-df = df.dropna()
+# Remoção de valores nulos apenas nas colunas essenciais
+colunas_analise = colunas_numericas + ["indice_gini", "ano", "nome_unidade_federativa"]
+df = df.dropna(subset=colunas_analise)
 
-df = df[df["obitos_evitaveis"] > 0]
+# Filtrar registos inválidos para evitar divisões por zero ou erros matemáticos
+df = df[
+    (df["obitos_evitaveis"] > 0)
+    & (df["populacao"] > 0)
+    & (df["obitos_hospitalares"] > 0)
+    & (df["internacoes"] > 0)
+    & (df["media_leitos_uti_sus"] >= 0)
+    & (df["media_leitos_uti_nao_sus"] >= 0)
+]
 
-# =========================
-# 1. EVOLUÇÃO DOS ÓBITOS EVITÁVEIS
-# =========================
+# ==============================================================================
+# CRIAÇÃO DE NOVAS MÉTRICAS (FEATURE ENGINEERING)
+# ==============================================================================
+print("A calcular métricas avançadas...")
 
-print("\nGerando evolução temporal...")
+# 1. Taxa Padronizada de Óbitos (Base da análise)
+df["taxa_obitos_100k"] = (df["obitos_evitaveis"] / df["populacao"]) * 100000
 
-evolucao = df.groupby("ano")["obitos_evitaveis"].sum().reset_index()
+# 2. Disparidade Público-Privada (% de UTIs pertencentes ao SUS)
+df["total_uti"] = df["media_leitos_uti_sus"] + df["media_leitos_uti_nao_sus"]
+df["pct_uti_sus"] = df.apply(
+    lambda r: (
+        (r["media_leitos_uti_sus"] / r["total_uti"]) * 100 if r["total_uti"] > 0 else 0
+    ),
+    axis=1,
+)
+
+# 3. Taxa de Evitabilidade (% de óbitos hospitalares que eram evitáveis)
+df["pct_mortes_evitaveis"] = (df["obitos_evitaveis"] / df["obitos_hospitalares"]) * 100
+
+# 4. Tempo Médio de Internação (Indicador de carga hospitalar)
+df["dias_por_internacao"] = df["dias_internacao"] / df["internacoes"]
+
+# 5. PIB per capita Absoluto (Ajuste da escala original que está em milhares)
+df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
+
+
+# ==============================================================================
+# PARTE I: MACROECONOMIA E TENDÊNCIAS GERAIS
+# ==============================================================================
+print("\nA gerar gráficos da Parte I...")
+
+# 1. EVOLUÇÃO DOS ÓBITOS EVITÁVEIS (TAXA NACIONAL CORRIGIDA)
+evolucao = df.groupby("ano")[["obitos_evitaveis", "populacao"]].sum().reset_index()
+evolucao["taxa_obitos_100k"] = (
+    evolucao["obitos_evitaveis"] / evolucao["populacao"]
+) * 100000
 
 plt.figure(figsize=(10, 5))
-
 sns.lineplot(
     data=evolucao,
     x="ano",
-    y="obitos_evitaveis",
+    y="taxa_obitos_100k",
     marker="o",
     color="darkred",
     linewidth=2,
 )
-
 plt.title(
-    "Evolução dos Óbitos Evitáveis no Brasil",
+    "Evolução da Taxa de Óbitos Evitáveis no Brasil (por 100k hab.)",
     fontsize=14,
     weight="bold",
 )
-
-plt.ylabel("Óbitos Evitáveis")
+plt.ylabel("Taxa de Óbitos Evitáveis")
 plt.xlabel("Ano")
-
 plt.tight_layout()
 plt.show()
 
-# =========================
-# 2. DESIGUALDADE VS ÓBITOS EVITÁVEIS
-# =========================
-
-print("\nGerando gráfico de Desigualdade vs Mortalidade...")
-
+# 2. DESIGUALDADE (GINI) VS ÓBITOS EVITÁVEIS
 plt.figure(figsize=(12, 7))
-
 sns.scatterplot(
     data=df,
     x="indice_gini",
-    y="obitos_evitaveis",
+    y="taxa_obitos_100k",
     hue="ano",
     palette="viridis",
     s=120,
     alpha=0.8,
     edgecolor="white",
 )
-
 sns.regplot(
     data=df,
     x="indice_gini",
-    y="obitos_evitaveis",
+    y="taxa_obitos_100k",
     scatter=False,
     color="gray",
-    line_kws={
-        "linestyle": "--",
-        "alpha": 0.6,
-    },
+    line_kws={"linestyle": "--", "alpha": 0.6},
 )
-
 plt.title(
-    "Desigualdade e Óbitos Evitáveis",
+    "Desigualdade e Taxa de Óbitos Evitáveis",
     fontsize=15,
     weight="bold",
 )
-
 plt.xlabel("Índice de Gini")
-plt.ylabel("Óbitos Evitáveis")
-
-plt.legend(
-    title="Ano",
-    bbox_to_anchor=(1.05, 1),
-    loc="upper left",
-)
-
+plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
+plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.grid(True, linestyle=":", alpha=0.7)
-
 plt.tight_layout()
 plt.show()
 
-# =========================
-# 3. INFRAESTRUTURA HOSPITALAR VS MORTALIDADE
-# =========================
-
-print("\nGerando gráfico de UTI vs Mortalidade...")
-
-plt.figure(figsize=(10, 6))
-
-sns.regplot(
+# 3. RIQUEZA x DESENVOLVIMENTO (BUBBLE CHART)
+plt.figure(figsize=(12, 7))
+sns.scatterplot(
     data=df,
-    x="media_leitos_uti_sus",
-    y="obitos_evitaveis",
-    scatter_kws={"alpha": 0.6, "color": "gray"},
-    line_kws={"color": "red"},
+    x="pib_per_capita_absoluto",
+    y="taxa_obitos_100k",
+    size="idhm",
+    sizes=(50, 500),
+    hue="ano",
+    palette="viridis",
+    alpha=0.7,
+    edgecolor="black",
 )
-
 plt.title(
-    "Leitos de UTI SUS e Óbitos Evitáveis",
+    "PIB per capita vs Mortalidade (Tamanho da bolha = IDHM)",
     fontsize=14,
     weight="bold",
 )
-
-plt.xlabel("Média de Leitos UTI SUS")
-plt.ylabel("Óbitos Evitáveis")
-
+plt.xlabel("PIB per Capita (R$)")
+plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
+plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.tight_layout()
 plt.show()
 
-# =========================
-# 4. EQUIPAMENTOS CRÍTICOS VS MORTALIDADE
-# =========================
 
-print("\nGerando gráfico de Equipamentos vs Mortalidade...")
+# ==============================================================================
+# PARTE II: INFRAESTRUTURA E EFICIÊNCIA HOSPITALAR
+# ==============================================================================
+print("A gerar gráficos da Parte II...")
 
+# 4. DISPARIDADE PÚBLICO-PRIVADA (% UTI SUS)
 plt.figure(figsize=(10, 6))
+sns.regplot(
+    data=df,
+    x="pct_uti_sus",
+    y="taxa_obitos_100k",
+    scatter_kws={"alpha": 0.6, "color": "teal"},
+    line_kws={"color": "darkred"},
+)
+plt.title("Proporção de UTIs do SUS vs Mortalidade", fontsize=14, weight="bold")
+plt.xlabel("Proporção de Leitos de UTI do SUS (%)")
+plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
+plt.tight_layout()
+plt.show()
 
+# 5. SATURAÇÃO HOSPITALAR (TEMPO DE INTERNAÇÃO) VS MORTALIDADE
+plt.figure(figsize=(10, 6))
+sns.regplot(
+    data=df,
+    x="dias_por_internacao",
+    y="taxa_obitos_100k",
+    scatter_kws={"alpha": 0.6, "color": "purple"},
+    line_kws={"color": "orange"},
+)
+plt.title("Tempo Médio de Internação vs Mortalidade", fontsize=14, weight="bold")
+plt.xlabel("Dias Médios por Internação")
+plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
+plt.tight_layout()
+plt.show()
+
+# 6. EQUIPAMENTOS CRÍTICOS VS MORTALIDADE
+plt.figure(figsize=(10, 6))
 sns.regplot(
     data=df,
     x="media_equip_manut_vida_sus",
-    y="obitos_evitaveis",
+    y="taxa_obitos_100k",
     scatter_kws={"alpha": 0.6, "color": "gray"},
     line_kws={"color": "darkred"},
 )
-
 plt.title(
-    "Equipamentos de Manutenção da Vida e Óbitos Evitáveis",
-    fontsize=14,
-    weight="bold",
+    "Equipamentos de Manutenção da Vida SUS e Mortalidade", fontsize=14, weight="bold"
 )
-
 plt.xlabel("Equipamentos SUS de Manutenção da Vida")
-plt.ylabel("Óbitos Evitáveis")
-
+plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
 plt.tight_layout()
 plt.show()
 
-# =========================
-# 5. QUARTIS DE RENDA
-# =========================
-
-print("\nGerando análise por renda...")
-
-df["nivel_renda"] = pd.qcut(
-    df["renda_per_capita"], q=4, labels=["Baixa", "Média-Baixa", "Média-Alta", "Alta"]
-)
-
-plt.figure(figsize=(12, 6))
-
-sns.barplot(
+# 7. IDHM VS TAXA DE EVITABILIDADE (% DE MORTES EVITÁVEIS)
+plt.figure(figsize=(10, 6))
+sns.scatterplot(
     data=df,
-    x="nivel_renda",
-    y="obitos_evitaveis",
+    x="idhm",
+    y="pct_mortes_evitaveis",
     hue="ano",
-    palette="Reds",
+    palette="magma",
+    s=100,
+    alpha=0.8,
+)
+plt.title("IDHM vs Proporção de Mortes Evitáveis", fontsize=14, weight="bold")
+plt.xlabel("IDHM (Índice de Desenvolvimento Humano)")
+plt.ylabel("% de Óbitos que eram Evitáveis")
+plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
+plt.grid(True, linestyle=":", alpha=0.7)
+plt.tight_layout()
+plt.show()
+
+
+# ==============================================================================
+# PARTE III: VISÃO REGIONAL DISTRIBUÍDA
+# ==============================================================================
+print("A gerar Mapa de Calor (Heatmap)...")
+
+# 8. HEATMAP DE EVOLUÇÃO REGIONAL POR UF
+pivot_obitos = df.pivot_table(
+    index="nome_unidade_federativa",
+    columns="ano",
+    values="taxa_obitos_100k",
+    aggfunc="mean",
 )
 
+plt.figure(figsize=(12, 10))
+sns.heatmap(pivot_obitos, cmap="YlOrRd", linewidths=0.5, annot=True, fmt=".1f")
 plt.title(
-    "Renda Per Capita e Óbitos Evitáveis",
+    "Mapa de Calor: Taxa de Óbitos Evitáveis (por 100k hab.) por Unidade Federativa",
     fontsize=14,
     weight="bold",
 )
-
-plt.xlabel("Quartis de Renda")
-plt.ylabel("Óbitos Evitáveis")
-
-plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
-
+plt.xlabel("Ano")
+plt.ylabel("Unidade Federativa")
 plt.tight_layout()
 plt.show()
 
-print("\nAnálise Exploratória Concluída!")
+print("\nAnálise Exploratória Completa Finalizada!")
