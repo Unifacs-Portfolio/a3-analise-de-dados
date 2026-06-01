@@ -1,2 +1,3 @@
 __pycache__/
-dataset_completo_consolidado
+./datasets/dataset_completo_consolidado.csv
+venv/
