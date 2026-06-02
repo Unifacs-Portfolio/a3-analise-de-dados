@@ -211,7 +211,9 @@ sns.regplot(
     line_kws={"color": "darkred"},
 )
 plt.title(
-    "Equipamentos de Manutenção da Vida SUS e Mortalidade", fontsize=14, weight="bold"
+    "Equipamentos de Manutenção da Vida SUS e Mortalidade",
+    fontsize=14,
+    weight="bold",
 )
 plt.xlabel("Equipamentos SUS de Manutenção da Vida")
 plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
@@ -220,7 +222,6 @@ plt.show()
 
 # 7. IDHM VS TAXA DE EVITABILIDADE (% DE MORTES EVITÁVEIS)
 plt.figure(figsize=(10, 6))
-
 sns.scatterplot(
     data=df,
     x="idhm",
@@ -230,7 +231,6 @@ sns.scatterplot(
     s=100,
     alpha=0.8,
 )
-
 sns.regplot(
     data=df,
     x="idhm",
@@ -243,11 +243,9 @@ sns.regplot(
         "linewidth": 2,
     },
 )
-
 plt.title("IDHM vs Proporção de Mortes Evitáveis", fontsize=14, weight="bold")
 plt.xlabel("IDHM (Índice de Desenvolvimento Humano)")
 plt.ylabel("% de Óbitos que eram Evitáveis")
-
 plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.grid(True, linestyle=":", alpha=0.7)
 plt.tight_layout()
@@ -280,7 +278,6 @@ plt.tight_layout()
 plt.show()
 
 # 9. MATRIZ DE CORRELAÇÃO GLOBAL (Métricas Socioeconômicas vs Saúde)
-
 print("A gerar o Mapa de Correlação Linear...")
 
 colunas_corr = [
@@ -312,7 +309,6 @@ matriz_correlacao = matriz_correlacao.rename(
 )
 
 plt.figure(figsize=(11, 9))
-
 sns.heatmap(
     matriz_correlacao,
     cmap="coolwarm",
@@ -323,16 +319,15 @@ sns.heatmap(
     linewidths=0.5,
     square=True,
 )
-
 plt.title(
     "Matriz de Correlação entre Indicadores Sócioeconômicos e de Saúde",
     fontsize=14,
     weight="bold",
     pad=20,
 )
-
 plt.tight_layout()
 plt.show()
+
 
 # ==============================================================================
 # PARTE IV: ANÁLISE VISUAL DE INFRAESTRUTURA (LEITOS E EQUIPAMENTOS CRÍTICOS)
@@ -375,11 +370,10 @@ sns.barplot(
     y="nome_unidade_federativa",
     x="Quantidade Média de Leitos",
     hue="Tipo de Leito",
-    palette=["#008080", "#E67E22"],  # Teal para SUS, Coral/Laranja para Não-SUS
+    palette=["#008080", "#E67E22"],  # Teal para SUS, Laranja para Não-SUS
     edgecolor="black",
     alpha=0.85,
 )
-
 plt.title(
     "Disponibilidade Média de Leitos de UTI (SUS vs Não-SUS) por Unidade Federativa\n"
     "(Ordenado de forma crescente pela Taxa de Óbitos)",
@@ -411,7 +405,8 @@ evolucao_infra = (
 
 fig, ax1 = plt.subplots(figsize=(13, 6))
 
-ax1.plot(
+# Eixo da Esquerda (ax1) - Infraestrutura
+ln1 = ax1.plot(
     evolucao_infra["ano"],
     evolucao_infra["media_leitos_uti_sus"],
     marker="s",
@@ -419,7 +414,7 @@ ax1.plot(
     linewidth=2.5,
     label="Média Leitos UTI SUS",
 )
-ax1.plot(
+ln2 = ax1.plot(
     evolucao_infra["ano"],
     evolucao_infra["media_leitos_uti_nao_sus"],
     marker="^",
@@ -427,7 +422,7 @@ ax1.plot(
     linewidth=2.5,
     label="Média Leitos UTI Não-SUS",
 )
-ax1.plot(
+ln3 = ax1.plot(
     evolucao_infra["ano"],
     evolucao_infra["media_equip_manut_vida_sus"],
     marker="x",
@@ -444,11 +439,13 @@ ax1.set_ylabel(
     fontsize=11,
 )
 ax1.tick_params(axis="y", labelcolor="black")
-ax1.legend(loc="upper left")
+
+# Garante o grid apenas para o eixo principal
 ax1.grid(True, linestyle=":", alpha=0.5)
 
+# Eixo da Direita (ax2) - Mortalidade
 ax2 = ax1.twinx()
-ax2.plot(
+ln4 = ax2.plot(
     evolucao_infra["ano"],
     evolucao_infra["taxa_obitos_100k"],
     marker="o",
@@ -459,7 +456,14 @@ ax2.plot(
 )
 ax2.set_ylabel("Taxa de Óbitos Evitáveis (por 100k hab.)", color="darkred", fontsize=11)
 ax2.tick_params(axis="y", labelcolor="darkred")
-ax2.legend(loc="upper right")
+
+# CORREÇÃO DO ERRO: Desativa as linhas de grade do segundo eixo Y
+ax2.grid(False)
+
+# CORREÇÃO DA LEGENDA: Combina todas as linhas em uma única caixa de legenda
+reuniao_linhas = ln1 + ln2 + ln3 + ln4
+rotulos = [l.get_label() for l in reuniao_linhas]
+ax1.legend(reuniao_linhas, rotulos, loc="upper left", frameon=True)
 
 plt.title(
     "Evolução Histórica Nacional: Expansão de Infraestrutura vs Redução de Mortalidade",
