@@ -295,7 +295,7 @@ if __name__ == "__main__":
     )
     df_gini = processar_dataset_gini("./datasets/datasets_juntos/indice_gini.csv")
     df_renda = processar_dataset_renda_capita(
-        "./datasets/datasets_juntos/renda_per_capita.csv"
+        "./datasets/datasets_juntos/renda_media_mensal_domiciliar_per_capita.csv"
     )
     df_pib = processar_dataset_pib("./datasets/datasets_juntos/pib_corrente.csv")
     df_obitos_hospitalares = processar_datasus_obitos(
