@@ -2,3 +2,4 @@ basedosdados
 pandas
 seaborn
 matplotlib
+openpyxl
