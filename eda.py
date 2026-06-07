@@ -100,7 +100,7 @@ sns.lineplot(
     linewidth=2,
 )
 plt.title(
-    "Evolução da Taxa de Óbitos Evitáveis no Brasil (por 100k hab.)",
+    "Evolução da Taxa de Óbitos Evitáveis no Brasil entre 5 e 74 anos (por 100k hab.)",
     fontsize=14,
     weight="bold",
 )

@@ -1,0 +1,39 @@
+ Morbidade Hospitalar do SUS - por local de residência - Brasil
+Óbitos por Unidade da Federação e Ano atendimento
+Lista Morb  CID-10: Tuberculose pulmonar, Restante de tuberculose respiratória, Tuberculose do sistema nervoso, Tuberculose miliar, Outros tétanos, Difteria, Coqueluche, Sífilis congênita, Sífilis precoce, Outras sífilis, Doenças por clamídias transmitidas por via sexual, Poliomielite aguda, Sarampo, Rubéola, Hepatite aguda B, Outras hepatites virais, Doença pelo vírus da imunodeficiência humana [HIV], Seqüelas de tuberculose, Neoplasia maligna do lábio cavidade oral e faringe, Neoplasia maligna do esôfago, Neoplasia maligna do estômago, Neoplasia maligna do cólon, Neoplasia maligna de traquéia brônquios e pulmões, Neoplasia maligna da mama, Neoplasia maligna do colo do útero, Neoplasia maligna da bexiga, Doença de Hodgkin, Leucemia, Tireotoxicose, Diabetes mellitus, Obesidade, Transt mentais e comportamentais dev uso de álcool, Epilepsia, Doença reumática crônica do coração, Hipertensão essencial (primária), Outras doenças isquêmicas do coração, Outras doenças cerebrovasculares, Arteroesclerose, Influenza [gripe], Pneumonia, Hérnia inguinal, Outras hérnias, Outras doenças inflamat órgãos pélvicos femininos, Aborto espontâneo, Aborto por razões médicas, Outras gravidezes que terminam em aborto, Acidentes de transporte, Quedas, Afogamento e submersão acidentamente, Exposição ao fumo ao fogo e às chamas, Envenenamento intox exposição substâncias nocivas, Lesões autoprovocadas voluntariamente, Agressões
+Faixa Etária 2: 5 a 9 anos, 10 a 14 anos, 15 a 19 anos, 20 a 24 anos, 25 a 29 anos, 30 a 34 anos, 35 a 39 anos, 40 a 44 anos, 45 a 49 anos, 50 a 54 anos, 55 a 59 anos, 60 a 64 anos, 65 a 69 anos, 70 a 74 anos
+Período:Jan/2008-Mar/2026
+"Unidade da Federação";"2007";"2008";"2009";"2010";"2011";"2012";"2013";"2014";"2015";"2016";"2017";"2018";"2019";"2020";"2021";"2022";"2023";"2024";"2025";"2026";"Total"
+"11 Rondônia";10;190;219;300;351;408;394;455;447;527;550;484;486;480;485;513;573;554;665;102;8193
+"12 Acre";17;162;159;154;212;196;168;196;178;221;206;255;242;240;287;220;263;277;255;31;3939
+"13 Amazonas";33;455;507;657;643;603;641;645;741;837;879;954;1010;1111;1202;1129;1093;1178;1184;206;15708
+"14 Roraima";5;70;104;143;141;114;131;124;159;181;217;281;285;222;243;256;242;171;123;3;3215
+"15 Pará";80;936;1237;1306;1235;1258;1352;1563;1495;1609;1616;1650;1664;1768;1757;1918;2093;2186;2423;261;29407
+"16 Amapá";21;137;150;153;115;133;194;171;158;154;168;197;206;169;171;221;258;222;224;41;3263
+"17 Tocantins";23;278;274;331;306;313;297;400;289;361;337;304;369;326;428;410;408;497;530;79;6560
+"21 Maranhão";57;709;854;884;905;878;1085;1232;1311;1347;1393;1530;1544;1404;1498;1889;1819;1954;1860;358;24511
+"22 Piauí";34;475;531;518;625;633;655;682;781;754;661;639;798;583;684;866;878;882;832;159;12670
+"23 Ceará";69;1412;1565;1633;1550;1657;1757;1897;2069;2097;2204;2288;2485;2140;2141;2498;2549;2763;2650;459;37883
+"24 Rio Grande do Norte";53;553;713;683;689;721;725;685;741;767;844;929;908;794;879;880;980;996;1039;113;14692
+"25 Paraíba";37;666;781;821;884;881;1004;967;972;1060;1097;1205;1259;1088;1142;1347;1277;1558;1511;250;19807
+"26 Pernambuco";186;2831;2761;2270;2341;2495;2967;2805;2897;2920;2790;2743;2898;2299;2142;2948;2972;3088;2811;495;49659
+"27 Alagoas";19;456;640;764;835;816;926;903;1043;1066;1055;1029;1000;895;1004;999;1131;1114;1087;208;16990
+"28 Sergipe";16;300;351;309;373;355;416;363;547;661;568;564;657;516;619;667;641;796;697;46;9462
+"29 Bahia";102;2420;2772;2706;2991;3136;3296;3409;3379;3359;3443;3338;3568;3472;3452;3538;3524;3819;3979;586;60289
+"31 Minas Gerais";433;5444;6068;6210;6367;6683;6625;6408;6573;6804;6945;6872;6928;6257;6454;7064;7588;8478;8029;1362;123592
+"32 Espírito Santo";68;779;877;971;1078;1054;1129;1070;1227;1213;1208;1261;1359;1208;1270;1278;1326;1375;1464;264;21479
+"33 Rio de Janeiro";286;4928;5327;5752;5943;5862;5962;5490;5970;5674;5699;6312;6274;6939;6573;6830;7075;7316;7153;1062;112427
+"35 São Paulo";869;12839;14527;15013;14736;14773;15108;14753;15012;15791;15141;15829;16029;15891;15187;15369;15964;16913;16841;3141;279726
+"41 Paraná";230;3089;3210;3412;3621;3555;3813;3765;3974;4264;3846;3994;4077;3748;4004;4229;4350;4743;4731;674;71329
+"42 Santa Catarina";178;1856;2255;2265;2332;2528;2688;2683;2719;3018;2742;2926;2963;2708;2890;3109;3053;3336;3359;547;50155
+"43 Rio Grande do Sul";342;4648;5222;5043;5113;5345;5546;5415;5318;5558;5395;5529;5395;4752;4981;5651;5236;5557;5293;772;96111
+"50 Mato Grosso do Sul";43;697;773;960;912;998;1070;1031;1038;1128;1130;1163;1166;1192;1276;1451;1415;1462;1486;149;20540
+"51 Mato Grosso";32;486;660;831;815;766;764;839;828;858;812;786;814;749;765;743;845;824;947;133;14297
+"52 Goiás";75;1264;1606;1685;1620;1569;1735;1849;1780;1774;1730;1847;1985;1876;1851;2036;1986;2172;2148;336;32924
+"53 Distrito Federal";75;602;629;654;711;699;707;698;741;760;678;683;729;661;620;672;696;812;788;139;12754
+"Total";3393;48682;54772;56428;57444;58429;61155;60498;62387;64763;63354;65592;67098;63488;64005;68731;70235;75043;74109;11976;1151582
+ Fonte: Ministério da Saúde - Sistema de Informações Hospitalares do SUS (SIH/SUS)
+ Notas:
+ 
+ Dados referentes aos últimos seis meses, sujeitos a atualização.
+ 

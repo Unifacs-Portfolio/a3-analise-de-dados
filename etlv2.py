@@ -11,20 +11,50 @@ from utils.utils import (
     inspecionar_dados,
 )
 
+# =====================================================================
+# FUNÇÃO GENÉRICA PARA LER ARQUIVOS DIVIDIDOS POR ANO
+# =====================================================================
+
+
+def ler_datasus_dinamico(caminho):
+    with open(caminho, "r", encoding="latin1") as f:
+        linhas = f.readlines()
+
+    linha_cabecalho = 0
+    # Procura a linha que começa a tabela
+    for i, linha in enumerate(linhas):
+        # Remove as aspas duplas e espaços para facilitar a busca
+        linha_limpa = linha.replace('"', "").strip()
+        if linha_limpa.startswith("Unidade da Federa"):
+            linha_cabecalho = i
+            break
+    df = pd.read_csv(
+        caminho,
+        encoding="latin1",
+        sep=";",
+        skiprows=linha_cabecalho,
+        na_values=["-", " - "],
+        on_bad_lines="skip",
+    )
+
+    return remove_footer(df)
+
 
 # =====================================================================
 # FUNÇÃO GENÉRICA PARA LER ARQUIVOS DIVIDIDOS POR ANO
 # =====================================================================
 
 
-def processar_arquivos_anuais(dicionario_caminhos):
+def processar_arquivos_anuais(dicionario_caminhos, sufixo=""):
     dfs = []
+    print(f"\n🔍 Lendo {len(dicionario_caminhos)} arquivos para o grupo '{sufixo}'...")
+
     for ano, caminho in dicionario_caminhos.items():
-        df = remove_footer(
-            pd.read_csv(
-                caminho, encoding="latin1", sep=";", header=3, na_values=["-", " - "]
-            )
-        )
+        if not os.path.exists(caminho):
+            print(f"  ❌ ALERTA: Ficheiro NÃO ENCONTRADO -> {caminho}")
+            continue
+
+        df = ler_datasus_dinamico(caminho)
         df = df.drop(columns=["Total"], errors="ignore")
         df = df.rename(columns={df.columns[0]: "unidade_federativa"})
         df = split_id_name_unidade_federativa(df, "unidade_federativa")
@@ -32,41 +62,61 @@ def processar_arquivos_anuais(dicionario_caminhos):
         df["ano"] = str(ano)
         dfs.append(df)
 
-    df_final = pd.concat(dfs, ignore_index=True)
+    if not dfs:
+        print(
+            f"🚨 ERRO: Nenhum arquivo processado para '{sufixo}'. Retornando DataFrame vazio."
+        )
+        return pd.DataFrame(
+            columns=["id_unidade_federativa", "nome_unidade_federativa", "ano"]
+        )
 
+    df_final = pd.concat(dfs, ignore_index=True)
     colunas_metricas = df_final.columns.difference(
         ["id_unidade_federativa", "nome_unidade_federativa", "ano"]
     )
 
     for col in colunas_metricas:
         df_final[col] = df_final[col].fillna(0).astype(int)
+        if sufixo:
+            df_final = df_final.rename(columns={col: f"{col}_{sufixo}"})
 
     return df_final
 
 
-# ====================
-# MÓDULOS DE DOMÍNIO
-# ====================
+# =====================================================================
+# FUNÇÃO PARA OS DATASETS DE MORTES SUS (Anos nas Colunas)
+# =====================================================================
 
 
-def obter_mortes_por_causa(dicionario_caminhos):
-    return processar_arquivos_anuais(dicionario_caminhos)
+def processar_sus_anos_colunas(caminho_arquivo, nome_valor):
+    if not os.path.exists(caminho_arquivo):
+        print(f"❌ ALERTA: Ficheiro NÃO ENCONTRADO -> {caminho_arquivo}")
+        return pd.DataFrame(
+            columns=[
+                "id_unidade_federativa",
+                "nome_unidade_federativa",
+                "ano",
+                nome_valor,
+            ]
+        )
 
+    df = ler_datasus_dinamico(caminho_arquivo)
+    df = df.rename(columns={df.columns[0]: "unidade_federativa"})
 
-def obter_mortes_por_cid10(dicionario_caminhos):
-    return processar_arquivos_anuais(dicionario_caminhos)
+    anos_interesse = ["2018", "2021", "2022", "2023"]
+    colunas_presentes = [ano for ano in anos_interesse if ano in df.columns]
 
+    df = split_id_name_unidade_federativa(df, "unidade_federativa")
+    df = df[["id_unidade_federativa", "nome_unidade_federativa"] + colunas_presentes]
 
-def obter_mortes_por_local(dicionario_caminhos):
-    df = processar_arquivos_anuais(dicionario_caminhos)
-    # Renomeando para facilitar no EDA
-    df = df.rename(
-        columns={
-            "Hospital": "obitos_hospital",
-            "Outro estabelecimento de saúde": "obitos_outro_estab_saude",
-            "Domicílio": "obitos_domicilio",
-            "Via pública": "obitos_via_publica",
-        }
+    for col in colunas_presentes:
+        df[col] = df[col].fillna(0).astype(int)
+
+    df = df.melt(
+        id_vars=["id_unidade_federativa", "nome_unidade_federativa"],
+        value_vars=colunas_presentes,
+        var_name="ano",
+        value_name=nome_valor,
     )
     return df
 
@@ -77,27 +127,19 @@ def obter_mortes_por_local(dicionario_caminhos):
 
 
 def obter_idhm_longevidade(caminho_arquivo):
-    print(
-        "\n[ETL Mortalidade] Convertendo Excel para CSV para garantir a pureza dos Dtypes..."
-    )
-
+    print("\n[ETL V2] Convertendo Excel para CSV para garantir a pureza dos Dtypes...")
     df_excel = pd.read_excel(
         caminho_arquivo, engine="openpyxl", sheet_name="Base de Dados"
     )
     caminho_csv = caminho_arquivo.replace(".xlsx", "_convertido.csv")
     df_excel.to_csv(caminho_csv, index=False, encoding="utf-8")
 
-    print(f"[ETL Mortalidade] CSV gerado com sucesso em: {caminho_csv}")
-    print("[ETL Mortalidade] Lendo o novo CSV e processando...")
     df = pd.read_csv(caminho_csv, encoding="utf-8")
 
-    # Filtra apenas os Estados (UF)
     if "AGREGACAO" in df.columns:
         df = df[df["AGREGACAO"] == "UF"]
 
-    # Fica apenas com as colunas que importam
     df = df[["CODIGO", "NOME", "ANO", "IDHM_L"]]
-
     df = df.rename(
         columns={
             "CODIGO": "id_unidade_federativa",
@@ -107,12 +149,9 @@ def obter_idhm_longevidade(caminho_arquivo):
         }
     )
     df["id_unidade_federativa"] = df["id_unidade_federativa"].astype(int).astype(str)
-    df["ano"] = df["ano"].astype(str)
-
-    # Filtra apenas os anos que temos base
+    df["ano"] = df["ano"].astype(int).astype(str)
     df = df[df["ano"].isin(["2018", "2021"])]
 
-    # Pivota os dados
     df = df.pivot_table(
         index=["id_unidade_federativa", "nome_unidade_federativa"],
         columns="ano",
@@ -120,10 +159,7 @@ def obter_idhm_longevidade(caminho_arquivo):
         aggfunc="first",
     ).reset_index()
 
-    # Limpando o nome da coluna de índice
     df.columns.name = None
-
-    # Foward Fill
     df["2022"] = df["2021"]
     df["2023"] = df["2021"]
 
@@ -133,57 +169,144 @@ def obter_idhm_longevidade(caminho_arquivo):
         var_name="ano",
         value_name="idhm_l",
     )
-
     return df
 
 
 # ===========================
-# Caminhos para os arquivos
+# ORQUESTRAÇÃO DOS ARQUIVOS
 # ===========================
 
 if __name__ == "__main__":
-    print("Carregando dados para a segunda fase de etl!")
+    print("🚀 Carregando dados para a segunda fase de ETL!")
 
+    # Criei uma lista de anos para facilitar se você quiser adicionar 2019, 2020 depois.
+    anos = ["2018", "2021", "2022", "2023"]
+
+    caminhos_mortes_geral = {
+        ano: f"./datasets/mortalidade_geral_5_74/{ano}.csv" for ano in anos
+    }
     caminhos_mortes_local = {
-        "2018": "./datasets_v2/mortes_evitaveis_local_ocorrencia/mortes_evitaveis_5_74_local_ocorrencia_2018.csv",
-        "2021": "./datasets_v2/mortes_evitaveis_local_ocorrencia/mortes_evitaveis_5_74_local_ocorrencia_2021.csv",
-        "2022": "./datasets_v2/mortes_evitaveis_local_ocorrencia/mortes_evitaveis_5_74_local_ocorrencia_2022.csv",
-        "2023": "./datasets_v2/mortes_evitaveis_local_ocorrencia/mortes_evitaveis_5_74_local_ocorrencia_2023.csv",
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/local_ocorrencia/{ano}.csv"
+        for ano in anos
     }
-    df_mortes_local = obter_mortes_por_local(caminhos_mortes_local)
-
     caminhos_mortes_cid10 = {
-        "2018": "./datasets_v2/mortes_evitaveis_cid10/mortes_evitaveis_5_74_cid10_2018.csv",
-        "2021": "./datasets_v2/mortes_evitaveis_cid10/mortes_evitaveis_5_74_cid10_2021.csv",
-        "2022": "./datasets_v2/mortes_evitaveis_cid10/mortes_evitaveis_5_74_cid10_2022.csv",
-        "2023": "./datasets_v2/mortes_evitaveis_cid10/mortes_evitaveis_5_74_cid10_2023.csv",
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/{ano}.csv"
+        for ano in anos
     }
-    df_mortes_cid10 = obter_mortes_por_cid10(caminhos_mortes_cid10)
 
-    caminhos_mortes_causas = {
-        "2018": "./datasets_v2/mortes_evitaveis_causa/mortes_evitaveis_5_74_causa_2018.csv",
-        "2021": "./datasets_v2/mortes_evitaveis_causa/mortes_evitaveis_5_74_causa_2021.csv",
-        "2022": "./datasets_v2/mortes_evitaveis_causa/mortes_evitaveis_5_74_causa_2022.csv",
-        "2023": "./datasets_v2/mortes_evitaveis_causa/mortes_evitaveis_5_74_causa_2023.csv",
+    # Subgrupos CID-10
+    caminhos_cid10_domicilio = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/domicilio/{ano}.csv"
+        for ano in anos
     }
-    df_mortes_causas = obter_mortes_por_causa(caminhos_mortes_causas)
+    caminhos_cid10_hospital = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/hospital/{ano}.csv"
+        for ano in anos
+    }
+    caminhos_cid10_ignorado = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/ignorado/{ano}.csv"
+        for ano in anos
+    }
+    caminhos_cid10_outro_estab = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/outro_estabelecimento_saude/{ano}.csv"
+        for ano in anos
+    }
+    caminhos_cid10_outros = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/outros/{ano}.csv"
+        for ano in anos
+    }
+    caminhos_cid10_via_publica = {
+        ano: f"./datasets/mortalidade_geral_5_74/grupo_1/cid10/via_publica/{ano}.csv"
+        for ano in anos
+    }
 
-    df_idhml = obter_idhm_longevidade("./datasets_v2/outros/base_de_dados.xlsx")
+    # PROCESSANDO TUDO
+    df_mortes_geral = processar_arquivos_anuais(caminhos_mortes_geral)
 
-    dfs_v2_final = [df_mortes_causas, df_mortes_cid10, df_idhml, df_mortes_local]
+    # Renomeando o agrupamento local de ocorrência
+    df_mortes_local = processar_arquivos_anuais(caminhos_mortes_local)
+    df_mortes_local = df_mortes_local.rename(
+        columns={
+            "Hospital": "obitos_hospital",
+            "Outro estabelecimento de saúde": "obitos_outro_estab_saude",
+            "Domicílio": "obitos_domicilio",
+            "Via pública": "obitos_via_publica",
+            "Outros": "obitos_outros",
+            "Ignorado": "obitos_ignorado",
+        }
+    )
 
-    inspecionar_dados(df_mortes_causas, "dados mortes causas")
-    inspecionar_dados(df_mortes_cid10, "dados mortes cid10")
-    inspecionar_dados(df_mortes_local, "dados mortes local")
-    inspecionar_dados(df_idhml, "dados idhm-L")
+    df_mortes_cid10 = processar_arquivos_anuais(caminhos_mortes_cid10, sufixo="geral")
+    df_cid10_domicilio = processar_arquivos_anuais(
+        caminhos_cid10_domicilio, sufixo="domicilio"
+    )
+    df_cid10_hospital = processar_arquivos_anuais(
+        caminhos_cid10_hospital, sufixo="hospital"
+    )
+    df_cid10_ignorado = processar_arquivos_anuais(
+        caminhos_cid10_ignorado, sufixo="ignorado"
+    )
+    df_cid10_outro_estab = processar_arquivos_anuais(
+        caminhos_cid10_outro_estab, sufixo="outro_estab"
+    )
+    df_cid10_outros = processar_arquivos_anuais(caminhos_cid10_outros, sufixo="outros")
+    df_cid10_via_publica = processar_arquivos_anuais(
+        caminhos_cid10_via_publica, sufixo="via_publica"
+    )
+
+    # PROCESSANDO OS 3 NOVOS DATASETS
+    df_dias_permanencia = processar_sus_anos_colunas(
+        "./datasets/datasets_juntos/dias_permanencia_sus.csv",
+        "dias_permanencia_sus_total",
+    )
+    df_internacoes_sus = processar_sus_anos_colunas(
+        "./datasets/datasets_juntos/internacoes_sus.csv", "internacoes_sus_total"
+    )
+    df_obitos_sus = processar_sus_anos_colunas(
+        "./datasets/datasets_juntos/obitos_sus.csv", "obitos_sus_total"
+    )
+
+    df_idhml = obter_idhm_longevidade("./datasets/datasets_juntos/base_de_dados.xlsx")
+
+    # LISTA FINAL COM TODAS AS NOVAS VARIÁVEIS
+    dfs_v2_final = [
+        df_mortes_geral,
+        df_mortes_local,
+        df_mortes_cid10,
+        df_cid10_domicilio,
+        df_cid10_hospital,
+        df_cid10_ignorado,
+        df_cid10_outro_estab,
+        df_cid10_outros,
+        df_cid10_via_publica,
+        df_dias_permanencia,
+        df_internacoes_sus,
+        df_obitos_sus,
+        df_idhml,
+    ]
+
+    inspecionar_dados(df_mortes_geral, "dataset mortes")
+    inspecionar_dados(df_mortes_local, "dataset mortes local")
+    inspecionar_dados(df_mortes_cid10, "dataset mortes cid10")
+    inspecionar_dados(df_cid10_domicilio, "dataset cid10 domicilio")
+    inspecionar_dados(df_cid10_hospital, "dataset cid10 hospital")
+    inspecionar_dados(df_cid10_ignorado, "dataset cid10 ignorado")
+    inspecionar_dados(df_cid10_outro_estab, "dataset cid10 outro estabelecimento")
+    inspecionar_dados(df_cid10_outros, "dataset cid10 outros")
+    inspecionar_dados(df_cid10_via_publica, "dataset cid10 via publica")
+    inspecionar_dados(df_dias_permanencia, "dataset dias permanencia")
+    inspecionar_dados(df_internacoes_sus, "dataset internações sus")
+    inspecionar_dados(df_obitos_sus, "dataset obitos sus")
+    inspecionar_dados(df_idhml, "dataset idhml")
 
     # =======================
-    # Juntando os dados novos
+    # JUNTANDO COM O PRIMEIRO DATASET COMPLETO
     # =======================
 
-    print("\n[ETL V2] Lendo o Golden Record V1...")
+    print("\n[ETL V2] Lendo o Dataset completo...")
     df_consolidado_v1 = pd.read_csv("./datasets/dataset_completo_consolidado.csv")
 
+    # Padronização de tipos de chaves para o merge
     df_consolidado_v1["id_unidade_federativa"] = df_consolidado_v1[
         "id_unidade_federativa"
     ].astype(str)
@@ -191,7 +314,9 @@ if __name__ == "__main__":
 
     dfs_para_mesclar = [df_consolidado_v1] + dfs_v2_final
 
-    print("[ETL V2] Enriquecendo a base com dados de Mortalidade e Longevidade...")
+    print(
+        "[ETL V2] Enriquecendo a base com dados Detalhados de Mortalidade (CID-10) e SUS..."
+    )
     df_consolidado_final = reduce(
         lambda esquerda, direita: pd.merge(
             esquerda,
@@ -204,3 +329,6 @@ if __name__ == "__main__":
 
     caminho_saida = "./datasets/dataset_completo_consolidado.csv"
     df_consolidado_final.to_csv(caminho_saida, index=False, encoding="utf-8")
+    print(
+        f"\n✅ SUCESSO! O seu Mega Dataset foi atualizado sem duplicar nomes de colunas e salvo em: {caminho_saida}"
+    )
