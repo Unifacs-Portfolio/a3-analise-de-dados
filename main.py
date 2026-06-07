@@ -31,7 +31,7 @@ from utils.utils import (
 
 def processar_datasus_internacoes(caminho_arquivo):
     df = remove_footer(
-        pd.read_csv(caminho_arquivo, encoding="latin1", sep=";", header=3)
+        pd.read_csv(caminho_arquivo, encoding="latin1", sep=";", header=5)
     )
     df = df.drop(columns=["Total", "2017", "2019", "2020", "2024", "2025", "2026"])
     df = df.rename(
@@ -61,7 +61,7 @@ def processar_datasus_dias_permanencia(caminho_arquivo):
         pd.read_csv(
             caminho_arquivo,
             encoding="latin1",
-            header=3,
+            header=5,
             sep=";",
             usecols=["Unidade da Federação", "2018", "2021", "2022", "2023"],
         )
@@ -227,7 +227,7 @@ def processar_datasus_obitos_evitaveis(caminho_arquivo):
             caminho_arquivo,
             encoding="latin1",
             sep=";",
-            header=3,
+            header=5,
             usecols=["Unidade da Federação", "2018", "2021", "2022", "2023"],
             thousands=".",
             decimal=",",
@@ -300,6 +300,18 @@ if __name__ == "__main__":
     )
     df_idhm = processar_dataset_idhm(
         "./datasets/datasets_juntos/indice_desenvolvimento_humano.csv"
+    )
+
+    df_obitos_evitaveis = processar_datasus_obitos_evitaveis(
+        "./datasets/datasets_juntos/obitos_sus.csv"
+    )
+
+    df_dias_permanencia = processar_datasus_dias_permanencia(
+        "./datasets/datasets_juntos/dias_permanencia_sus.csv"
+    )
+
+    df_internacoes = processar_datasus_internacoes(
+        "./datasets/datasets_juntos/internacoes_sus.csv"
     )
 
     # Bases dos leitos para usar unitariamente
@@ -384,6 +396,9 @@ if __name__ == "__main__":
         df_pib,
         df_populacao,
         df_idhm,
+        df_obitos_evitaveis,
+        df_dias_permanencia,
+        df_internacoes,
     ]
     df_consolidado = reduce(
         lambda esquerda, direita: pd.merge(
