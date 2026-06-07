@@ -101,6 +101,7 @@ def processar_dataset_gini(caminho_arquivo):
         var_name="ano",
         value_name="indice_gini",
     )
+    df = df[df["ano"].isin(["2018", "2021", "2022", "2023"])]
     return df
 
 
@@ -124,6 +125,7 @@ def processar_dataset_renda_capita(caminho_arquivo):
         var_name="ano",
         value_name="renda_per_capita",
     )
+    df = df[df["ano"].isin(["2018", "2021", "2022", "2023"])]
     return df
 
 
@@ -145,6 +147,7 @@ def processar_dataset_pib(caminho_arquivo):
         var_name="ano",
         value_name="pib_milhares",
     )
+    df = df[df["ano"].isin(["2018", "2021", "2022", "2023"])]
     return df
 
 
@@ -287,25 +290,13 @@ if __name__ == "__main__":
     print("Iniciando processamento das matrizes históricas (Raiz)...")
 
     # Bases de dados
-    df_internacoes = processar_datasus_internacoes(
-        "./datasets/morbidade_hospitalar_sus/internacoes.csv"
-    )
-    df_permanencia = processar_datasus_dias_permanencia(
-        "./datasets/morbidade_hospitalar_sus/dias_permanencia.csv"
-    )
     df_gini = processar_dataset_gini("./datasets/datasets_juntos/indice_gini.csv")
     df_renda = processar_dataset_renda_capita(
         "./datasets/datasets_juntos/renda_media_mensal_domiciliar_per_capita.csv"
     )
     df_pib = processar_dataset_pib("./datasets/datasets_juntos/pib_corrente.csv")
-    df_obitos_hospitalares = processar_datasus_obitos(
-        "./datasets/morbidade_hospitalar_sus/obitos_hospitalares.csv"
-    )
     df_populacao = processar_dataset_populacao(
         "./datasets/datasets_juntos/populacao_ibge.csv"
-    )
-    df_obitos_evitaveis = processar_datasus_obitos_evitaveis(
-        "./datasets/datasets_juntos/obitos_evitaveis_5_74.csv"
     )
     df_idhm = processar_dataset_idhm(
         "./datasets/datasets_juntos/indice_desenvolvimento_humano.csv"
@@ -388,14 +379,10 @@ if __name__ == "__main__":
 
     print("Empilhando os dados para consolida-los")
     dfs = [
-        df_internacoes,
-        df_permanencia,
         df_gini,
         df_renda,
         df_pib,
-        df_obitos_hospitalares,
         df_populacao,
-        df_obitos_evitaveis,
         df_idhm,
     ]
     df_consolidado = reduce(

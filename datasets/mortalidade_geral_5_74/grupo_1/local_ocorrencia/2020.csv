@@ -1,0 +1,43 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Brasil
+Óbitos p/Residênc por Unidade da Federação e Local ocorrência
+Causas evitáveis: 1.1. Reduzíveis pelas ações de imunoprevenção, 1.2. Reduz ações prom prev contr atenç doenç infec, 1.3. Reduz ações prom prev contr atenç doe ñ trans, 1.4. Reduz ações prev contr atenção causas matern, 1.5. Reduz ações prom prev atenç causas externas
+Período:2020
+"Unidade da Federação";"Hospital";"Outro estabelecimento de saúde";"Domicílio";"Via pública";"Outros";"Ignorado";"Total"
+"11 Rondônia";2351;58;746;455;265;5;3880
+"12 Acre";1016;1;352;169;162;1;1701
+"13 Amazonas";5125;175;1570;716;603;5;8194
+"14 Roraima";742;6;312;85;227;5;1377
+"15 Pará";10357;1293;3652;2082;1562;52;18998
+"16 Amapá";963;48;336;189;194;3;1733
+"17 Tocantins";1893;135;870;551;280;4;3733
+"21 Maranhão";9076;508;4083;1911;1067;12;16657
+"22 Piauí";4632;64;2403;867;482;10;8458
+"23 Ceará";11369;1316;5373;3598;1706;21;23383
+"24 Rio Grande do Norte";4592;561;2209;1177;438;14;8991
+"25 Paraíba";6016;346;2493;1095;601;10;10561
+"26 Pernambuco";15049;1855;5773;3003;1608;26;27314
+"27 Alagoas";5211;325;2241;1096;544;6;9423
+"28 Sergipe";3306;54;1401;874;142;4;5781
+"29 Bahia";20491;2707;7831;4533;2841;64;38467
+"31 Minas Gerais";31334;4228;10116;3353;2181;80;51292
+"32 Espírito Santo";6652;678;2182;1082;598;16;11208
+"33 Rio de Janeiro";34650;8412;7474;2672;1958;12;55178
+"35 São Paulo";76435;8548;18126;5410;3235;50;111804
+"41 Paraná";18548;1510;6730;2768;1545;8;31109
+"42 Santa Catarina";10932;404;3581;1283;906;8;17114
+"43 Rio Grande do Sul";21391;1027;6156;2019;1710;19;32322
+"50 Mato Grosso do Sul";4496;293;1520;636;482;2;7429
+"51 Mato Grosso";4873;722;1610;1078;605;7;8895
+"52 Goiás";10742;1287;3671;1787;1129;19;18635
+"53 Distrito Federal";3703;348;970;451;184;2;5658
+"Total";325945;36909;103781;44940;27255;465;539295
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 
