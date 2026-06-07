@@ -1,0 +1,43 @@
+ Óbitos por causas evitáveis de 5 a 74 anos - Brasil
+Óbitos p/Residênc por Unidade da Federação e Capítulo CID-10
+Causas evitáveis: 1.1. Reduzíveis pelas ações de imunoprevenção, 1.2. Reduz ações prom prev contr atenç doenç infec, 1.3. Reduz ações prom prev contr atenç doe ñ trans, 1.4. Reduz ações prev contr atenção causas matern, 1.5. Reduz ações prom prev atenç causas externas
+Período:2023
+"Unidade da Federação";"Cap I";"Cap II";"Cap IV";"Cap V";"Cap VI";"Cap IX";"Cap X";"Cap XI";"Cap XII";"Cap XIV";"Cap XV";"Cap XX";"Total"
+"11 Rondônia";273;681;304;19;31;1112;440;104;6;73;11;1390;4444
+"12 Acre";142;339;77;6;11;422;229;38;2;33;6;507;1812
+"13 Amazonas";853;1447;817;67;53;2113;680;286;17;152;65;2899;9449
+"14 Roraima";133;239;79;1;7;365;131;55;4;53;17;533;1617
+"15 Pará";1546;2611;1368;93;106;5046;1858;692;95;365;91;5592;19463
+"16 Amapá";112;246;118;8;6;422;190;26;7;20;12;778;1945
+"17 Tocantins";142;553;299;91;31;1110;292;172;10;49;18;1327;4094
+"21 Maranhão";1135;2025;1451;184;99;4902;1282;702;97;271;93;4655;16896
+"22 Piauí";474;1161;788;203;86;2587;767;397;48;144;28;2396;9079
+"23 Ceará";1380;3967;1089;282;165;5741;2198;1050;117;359;65;7372;23785
+"24 Rio Grande do Norte";512;1590;653;79;58;2552;693;402;43;132;29;2003;8746
+"25 Paraíba";663;1720;916;117;62;3242;1023;494;41;258;35;2630;11201
+"26 Pernambuco";1962;3855;2055;414;197;8266;2182;1259;195;532;77;7308;28302
+"27 Alagoas";764;1159;825;169;48;3156;892;374;59;175;34;2427;10082
+"28 Sergipe";376;893;474;136;39;1415;407;257;34;109;14;1581;5735
+"29 Bahia";2537;5922;3351;878;317;10863;2876;1527;208;649;112;12068;41308
+"31 Minas Gerais";3666;9941;3971;1168;627;15020;6021;2054;220;1276;121;11733;55818
+"32 Espírito Santo";511;2120;1045;239;88;3260;726;518;54;371;26;3119;12077
+"33 Rio de Janeiro";4834;9065;4019;366;292;17400;6021;1258;317;1656;182;9872;55282
+"35 São Paulo";6989;24156;7584;816;809;38639;15186;4898;659;3029;256;18545;121566
+"41 Paraná";1532;6611;2386;605;384;8935;3426;1553;127;534;69;7538;33700
+"42 Santa Catarina";1000;4538;1362;171;143;5233;2003;720;55;339;36;4009;19609
+"43 Rio Grande do Sul";2225;8165;3081;500;222;8877;3517;1158;87;722;57;6402;35013
+"50 Mato Grosso do Sul";442;1367;441;57;78;2550;923;373;52;216;26;1927;8452
+"51 Mato Grosso";540;1436;803;125;60;2482;792;339;19;202;45;3155;9998
+"52 Goiás";998;3197;1238;283;192;5478;2092;969;65;345;57;4870;19784
+"53 Distrito Federal";334;1115;319;92;37;1377;517;311;28;96;21;1225;5472
+"Total";36075;100119;40913;7169;4248;162565;57364;21986;2666;12160;1603;127861;574729
+ Fonte: MS/SVSA/CGIAE - Sistema de Informações sobre Mortalidade - SIM
+ Notas:
+ 
+ Dados finais disponíveis até 2024 e atualizados em 02/12/2025.
+ Em 2011, houve uma mudança no conteúdo da Declaração de Óbito, com maior detalhamento das informações coletadas. Para este ano, foram
+ utilizados simultaneamente os dois formulários. Para mais detalhes sobre as mudanças ocorridas e os seus efeitos, veja o documento
+ "Sistema de Informações sobre Mortalidade - SIM. Consolidação da base de dados de 2011".
+ No dia 13/06/2019, os arquivos do SIM referentes ao ano de notificação 2017 foram atualizados, com alteração das causas básicas de 2 registros e exclusão de 1 registro.
+ No dia 01/04/2020, os arquivos do SIM referentes ao ano de notificação 2019 foram atualizados, com alteração das causas básicas de 4 registros e exclusão de 1 registro.
+ 
