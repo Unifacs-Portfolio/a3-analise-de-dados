@@ -1,13 +1,21 @@
-Markdown
-# 📊 A3BigData
+# 📊 A3BigData: Mapeamento da Desigualdade em Saúde no Brasil
 
-Equipe: 
-* Roan Nascimento Lisboa, 
-* Pedro Vinícius Montes dos Reis, 
-* Erick Barros Ferreira Gomes, 
-* Marcus Vinicius dos Santos.
+**Equipe:** 
+* Roan Nascimento Lisboa 
+* Pedro Vinícius Montes dos Reis 
+* Erick Barros Ferreira Gomes 
 
-Este projeto implementa um pipeline de Big Data e processos de ETL (Extract, Transform, Load) focado no processamento e análise de dados públicos de saúde. A aplicação realiza a extração e integração de grandes volumes de dados provenientes do **DATASUS (SIM - Sistema de Informações sobre Mortalidade)** e bases demográficas do **IBGE (via API SIDRA)**.
+Este projeto implementa um ecossistema de **Big Data e Engenharia de Dados (ETL)** focado em investigar o impacto da infraestrutura do Sistema Único de Saúde (SUS) e da desigualdade socioeconômica nas taxas de mortalidade evitável (5 a 74 anos) no Brasil.
+
+Através de um pipeline modular e escalável em Python, o projeto consolida uma *Base Mestra* unindo dezenas de matrizes governamentais brutas em uma série histórica validada (2018 a 2023), isolando fatores de confusão como o Viés Geográfico e o Mix Público-Privado.
+
+---
+
+## 🏛️ Fontes de Dados Integradas
+* **DATASUS (SIM & SIH):** Mortalidade Evitável, Internações, Capítulos do CID-10 e Locais de Ocorrência dos Óbitos.
+* **DATASUS (CNES):** Infraestrutura hospitalar (Leitos de UTI/Enfermaria e Equipamentos de Suporte à Vida/Diagnóstico), segregados entre rede SUS e Não-SUS.
+* **IBGE (PNAD/SIDRA):** População residente, Produto Interno Bruto (PIB), Rendimento Médio *per capita* e Índice de Gini.
+* **Atlas Brasil (PNUD):** Índice de Desenvolvimento Humano Municipal (IDHM e IDHM-Longevidade).
 
 ---
 
@@ -20,37 +28,48 @@ Abra o terminal na pasta raiz do projeto e execute o comando orquestrador:
 ```bash
 python start.py
 ```
-### ⚙️ O que acontece por baixo dos panos?
+--- 
 
-1 - Ao rodar o comando acima, o script automaticamente:
+## ⚙️ O que acontece por baixo dos panos?
 
-2 - Identifica o seu sistema operacional.
+1. O script identifica o seu sistema operacional automaticamente.
 
-3 - Cria um ambiente virtual (venv) isolado para evitar conflitos de versão.
+2. Cria um ambiente virtual (venv) isolado para evitar conflitos de versão.
 
-4 - Instala todas as bibliotecas listadas no requirements.txt.
+3. Instala todas as bibliotecas necessárias mapeadas no requirements.txt (ex: Pandas, Openpyxl, Plotly, etc.).
 
-5 - Verifica se a base de dados pesada já existe na máquina; caso não, faz o download automático via Google Drive.
+4. Verifica e realiza o download de bases de dados pesadas (caso necessário).
 
-6 - Inicia a execução do código principal (main.py).
+5. Inicia o pipeline de ETL divido em duas fases de consolidação.
 
-### 📂 Arquitetura de Pastas
+     * (Nota: Opcionalmente, o pipeline pode ser rodado manualmente através dos scripts "python main.py" seguido de "python etlv2.py").
 
-Abaixo está o mapeamento da estrutura do nosso repositório:
+6. Inicia o script responsável pela análise exploratória (eda.py), onde irá aparecer um **menu** para o usuário escolher qual categoria de gráfico vai ser gerado.
 
-```text
-Pasta Raiz/
+---
+
+## 📂 Arquitetura de Pastas e Módulos
+
+O projeto adota uma arquitetura em camadas baseada nos princípios Clean Code e Single Responsibility (Responsabilidade Única):
+
+```
+A3BigData/
 │
-├── utils/
-│   ├── download.py      # Script que gerencia o download de datasets pesados do Drive
-│   ├── api_sidra.py     # Integração com a API SIDRA para consumir dados do IBGE
-│   └── extracao_sim.py  # Script de extração e modelagem do dataset SIM via SQL
+├── etls/                     # Módulos de Domínio (Processamento de Saúde)
+│   ├── etl_leitos.py         # Tratamento matricial e matemático de leitos hospitalares
+│   └── etl_equipamentos.py   # Extração estatística do parque tecnológico (Média, Mediana, Desvio)
 │
-├── datasets/            # Diretório criado automaticamente para armazenar os dados brutos e processados
-├── venv/                # Ambiente virtual do Python (ignorado no versionamento)
+├── utils/                    # Funções utilitárias e de limpeza
+│   └── utils.py              # Algoritmos de limpeza, Regex para UFs e remoção dinâmica de rodapés
 │
-├── requirements.txt     # Mapeamento de todas as dependências (pandas, gdown, etc.)
-├── start.py             # Script orquestrador de setup e inicialização
-├── main.py              # Ponto de entrada (entry point) da aplicação
-└── README.md            # Documentação oficial do projeto
+├── datasets/                 # Diretório de armazenamento das bases governamentais brutos
+│
+├── eda.py                    # Arquivo de geração da Analise Exploratória [EDA]
+│
+├── main.py                   # [ETL Fase 1] Gera a base de dados consolidada 1 (Demografia + Infra + Economia)
+├── etlv2.py                  # [ETL Fase 2] Enriquecimento Idempotente (Subgrupos CID-10 e IDHM via Glob)
+│
+├── start.py                  # Script orquestrador de setup e inicialização
+├── requirements.txt          # Mapeamento de todas as dependências do projeto
+└── README.md                 # Documentação oficial do projeto
 ```
