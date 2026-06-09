@@ -1,477 +1,769 @@
-import matplotlib.pyplot as plt
+import sys
+import os
 import pandas as pd
-import seaborn as sns
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import statsmodels.api as sm
 
 # ==============================================================================
-# CONFIGURAÇÃO VISUAL
+# 1. CARREGAMENTO E PREPARAÇÃO DOS DADOS
 # ==============================================================================
-sns.set_theme(style="whitegrid", palette="muted")
-
-print("\nA carregar a Tabela Mestra...")
+print("\n[1/2] A carregar e a preparar a Tabela Mestra Consolidada...")
 df = pd.read_csv("./datasets/dataset_completo_consolidado.csv")
 
-# ==============================================================================
-# LIMPEZA E PREPARAÇÃO DOS DADOS
-# ==============================================================================
 df["ano"] = df["ano"].astype(str)
 
-# Corrigir o formato do Gini (tratamento de strings com vírgula)
-df["indice_gini"] = (
-    df["indice_gini"].astype(str).str.replace(",", ".", regex=False).astype(float)
-)
+# Corrigir o formato do Gini, IDHM e Renda
+for col in ["indice_gini", "idhm", "renda_per_capita"]:
+    if col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].str.replace(",", ".", regex=False).astype(float)
 
-# Colunas necessárias para todas as análises
+# Lista completa de colunas numéricas
 colunas_numericas = [
-    "obitos_evitaveis",
     "renda_per_capita",
     "media_leitos_uti_sus",
     "media_equip_manut_vida_sus",
     "populacao",
     "media_leitos_uti_nao_sus",
-    "obitos_hospitalares",
-    "dias_internacao",
-    "internacoes",
     "idhm",
     "pib_milhares",
+    "obitos_evitaveis",
+    "internacoes",
+    "media_leitos_enf_sus",
+    "internacoes_sus_total",
+    "obitos_domicilio_geral",
+    "Cap IX_geral",
+    "obitos_hospital_geral",
+    "dias_internacao_sus_total",
+    "obitos_hospitalares",
+    "dias_internacao",
 ]
 
 for col in colunas_numericas:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
-# Remoção de valores nulos apenas nas colunas essenciais
-colunas_analise = colunas_numericas + ["indice_gini", "ano", "nome_unidade_federativa"]
-df = df.dropna(subset=colunas_analise)
+# Limpeza Básica
+colunas_vitais = ["populacao", "ano", "nome_unidade_federativa"]
+df = df.dropna(subset=[c for c in colunas_vitais if c in df.columns])
+df = df[(df["populacao"] > 0)]
+df = df.sort_values(by=["ano", "nome_unidade_federativa"])
 
-# Filtrar registos inválidos para evitar divisões por zero ou erros matemáticos
-df = df[
-    (df["obitos_evitaveis"] > 0)
-    & (df["populacao"] > 0)
-    & (df["obitos_hospitalares"] > 0)
-    & (df["internacoes"] > 0)
-    & (df["media_leitos_uti_sus"] >= 0)
-    & (df["media_leitos_uti_nao_sus"] >= 0)
-]
-
-# ==============================================================================
-# CRIAÇÃO DE NOVAS MÉTRICAS (FEATURE ENGINEERING)
-# ==============================================================================
-print("A calcular métricas avançadas...")
-
-# 1. Taxa Padronizada de Óbitos (Base da análise)
-df["taxa_obitos_100k"] = (df["obitos_evitaveis"] / df["populacao"]) * 100000
-
-# 2. Disparidade Público-Privada (% de UTIs pertencentes ao SUS)
-df["total_uti"] = df["media_leitos_uti_sus"] + df["media_leitos_uti_nao_sus"]
-df["pct_uti_sus"] = df.apply(
-    lambda r: (
-        (r["media_leitos_uti_sus"] / r["total_uti"]) * 100 if r["total_uti"] > 0 else 0
-    ),
-    axis=1,
-)
-
-# 3. Taxa de Evitabilidade (% de óbitos hospitalares que eram evitáveis)
-df["pct_mortes_evitaveis"] = (df["obitos_evitaveis"] / df["obitos_hospitalares"]) * 100
-
-# 4. Tempo Médio de Internação (Indicador de carga hospitalar)
-df["dias_por_internacao"] = df["dias_internacao"] / df["internacoes"]
-
-# 5. PIB per capita Absoluto (Ajuste da escala original que está em milhares)
-df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
-
-
-# ==============================================================================
-# PARTE I: MACROECONOMIA E TENDÊNCIAS GERAIS
-# ==============================================================================
-print("\nA gerar gráficos da Parte I...")
-
-# 1. EVOLUÇÃO DOS ÓBITOS EVITÁVEIS (TAXA NACIONAL CORRIGIDA)
-evolucao = df.groupby("ano")[["obitos_evitaveis", "populacao"]].sum().reset_index()
-evolucao["taxa_obitos_100k"] = (
-    evolucao["obitos_evitaveis"] / evolucao["populacao"]
-) * 100000
-
-plt.figure(figsize=(10, 5))
-sns.lineplot(
-    data=evolucao,
-    x="ano",
-    y="taxa_obitos_100k",
-    marker="o",
-    color="darkred",
-    linewidth=2,
-)
-plt.title(
-    "Evolução da Taxa de Óbitos Evitáveis no Brasil entre 5 e 74 anos (por 100k hab.)",
-    fontsize=14,
-    weight="bold",
-)
-plt.ylabel("Taxa de Óbitos Evitáveis")
-plt.xlabel("Ano")
-plt.tight_layout()
-plt.show()
-
-# 2. DESIGUALDADE (GINI) VS ÓBITOS EVITÁVEIS
-plt.figure(figsize=(12, 7))
-sns.scatterplot(
-    data=df,
-    x="indice_gini",
-    y="taxa_obitos_100k",
-    hue="ano",
-    palette="viridis",
-    s=120,
-    alpha=0.8,
-    edgecolor="white",
-)
-sns.regplot(
-    data=df,
-    x="indice_gini",
-    y="taxa_obitos_100k",
-    scatter=False,
-    color="gray",
-    line_kws={"linestyle": "--", "alpha": 0.6},
-)
-plt.title(
-    "Desigualdade e Taxa de Óbitos Evitáveis",
-    fontsize=15,
-    weight="bold",
-)
-plt.xlabel("Índice de Gini")
-plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
-plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
-plt.grid(True, linestyle=":", alpha=0.7)
-plt.tight_layout()
-plt.show()
-
-# 3. RIQUEZA x DESENVOLVIMENTO (BUBBLE CHART)
-plt.figure(figsize=(12, 7))
-sns.scatterplot(
-    data=df,
-    x="pib_per_capita_absoluto",
-    y="taxa_obitos_100k",
-    size="idhm",
-    sizes=(50, 500),
-    hue="ano",
-    palette="viridis",
-    alpha=0.7,
-    edgecolor="black",
-)
-plt.title(
-    "PIB per capita vs Mortalidade (Tamanho da bolha = IDHM)",
-    fontsize=14,
-    weight="bold",
-)
-plt.xlabel("PIB per Capita (R$)")
-plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
-plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-plt.tight_layout()
-plt.show()
-
-
-# ==============================================================================
-# PARTE II: INFRAESTRUTURA E EFICIÊNCIA HOSPITALAR
-# ==============================================================================
-print("A gerar gráficos da Parte II...")
-
-# 4. DISPARIDADE PÚBLICO-PRIVADA (% UTI SUS)
-plt.figure(figsize=(10, 6))
-sns.regplot(
-    data=df,
-    x="pct_uti_sus",
-    y="taxa_obitos_100k",
-    scatter_kws={"alpha": 0.6, "color": "teal"},
-    line_kws={"color": "darkred"},
-)
-plt.title("Proporção de UTIs do SUS vs Mortalidade", fontsize=14, weight="bold")
-plt.xlabel("Proporção de Leitos de UTI do SUS (%)")
-plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
-plt.tight_layout()
-plt.show()
-
-# 5. SATURAÇÃO HOSPITALAR (TEMPO DE INTERNAÇÃO) VS MORTALIDADE
-plt.figure(figsize=(10, 6))
-sns.regplot(
-    data=df,
-    x="dias_por_internacao",
-    y="taxa_obitos_100k",
-    scatter_kws={"alpha": 0.6, "color": "purple"},
-    line_kws={"color": "orange"},
-)
-plt.title("Tempo Médio de Internação vs Mortalidade", fontsize=14, weight="bold")
-plt.xlabel("Dias Médios por Internação")
-plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
-plt.tight_layout()
-plt.show()
-
-# 6. EQUIPAMENTOS CRÍTICOS VS MORTALIDADE
-plt.figure(figsize=(10, 6))
-sns.regplot(
-    data=df,
-    x="media_equip_manut_vida_sus",
-    y="taxa_obitos_100k",
-    scatter_kws={"alpha": 0.6, "color": "gray"},
-    line_kws={"color": "darkred"},
-)
-plt.title(
-    "Equipamentos de Manutenção da Vida SUS e Mortalidade",
-    fontsize=14,
-    weight="bold",
-)
-plt.xlabel("Equipamentos SUS de Manutenção da Vida")
-plt.ylabel("Taxa de Óbitos Evitáveis (por 100k)")
-plt.tight_layout()
-plt.show()
-
-# 7. IDHM VS TAXA DE EVITABILIDADE (% DE MORTES EVITÁVEIS)
-plt.figure(figsize=(10, 6))
-sns.scatterplot(
-    data=df,
-    x="idhm",
-    y="pct_mortes_evitaveis",
-    hue="ano",
-    palette="magma",
-    s=100,
-    alpha=0.8,
-)
-sns.regplot(
-    data=df,
-    x="idhm",
-    y="pct_mortes_evitaveis",
-    scatter=False,
-    color="gray",
-    line_kws={
-        "linestyle": "--",
-        "alpha": 0.7,
-        "linewidth": 2,
-    },
-)
-plt.title("IDHM vs Proporção de Mortes Evitáveis", fontsize=14, weight="bold")
-plt.xlabel("IDHM (Índice de Desenvolvimento Humano)")
-plt.ylabel("% de Óbitos que eram Evitáveis")
-plt.legend(title="Ano", bbox_to_anchor=(1.05, 1), loc="upper left")
-plt.grid(True, linestyle=":", alpha=0.7)
-plt.tight_layout()
-plt.show()
-
-
-# ==============================================================================
-# PARTE III: VISÃO REGIONAL DISTRIBUÍDA
-# ==============================================================================
-print("A gerar Mapa de Calor (Heatmap)...")
-
-# 8. HEATMAP DE EVOLUÇÃO REGIONAL POR UF
-pivot_obitos = df.pivot_table(
-    index="nome_unidade_federativa",
-    columns="ano",
-    values="taxa_obitos_100k",
-    aggfunc="mean",
-)
-
-plt.figure(figsize=(12, 10))
-sns.heatmap(pivot_obitos, cmap="YlOrRd", linewidths=0.5, annot=True, fmt=".1f")
-plt.title(
-    "Mapa de Calor: Taxa de Óbitos Evitáveis (por 100k hab.) por Unidade Federativa",
-    fontsize=14,
-    weight="bold",
-)
-plt.xlabel("Ano")
-plt.ylabel("Unidade Federativa")
-plt.tight_layout()
-plt.show()
-
-# 9. MATRIZ DE CORRELAÇÃO GLOBAL (Métricas Socioeconômicas vs Saúde)
-print("A gerar o Mapa de Correlação Linear...")
-
-colunas_corr = [
-    "taxa_obitos_100k",
-    "indice_gini",
-    "idhm",
-    "pib_per_capita_absoluto",
-    "pct_uti_sus",
-    "pct_mortes_evitaveis",
-    "dias_por_internacao",
-    "media_equip_manut_vida_sus",
-]
-
-matriz_correlacao = df[colunas_corr].corr()
-
-nomes_amigaveis = {
-    "taxa_obitos_100k": "Taxa Óbitos (100k)",
-    "indice_gini": "Índice de Gini",
-    "idhm": "IDHM",
-    "pib_per_capita_absoluto": "PIB per Capita",
-    "pct_uti_sus": "% UTI SUS",
-    "pct_mortes_evitaveis": "% Mortes Evitáveis",
-    "dias_por_internacao": "Dias por Internação",
-    "media_equip_manut_vida_sus": "Equipamentos SUS",
+# Mapeamento Espacial
+regioes = {
+    "Acre": "Norte",
+    "Amapá": "Norte",
+    "Amazonas": "Norte",
+    "Pará": "Norte",
+    "Rondônia": "Norte",
+    "Roraima": "Norte",
+    "Tocantins": "Norte",
+    "Alagoas": "Nordeste",
+    "Bahia": "Nordeste",
+    "Ceará": "Nordeste",
+    "Maranhão": "Nordeste",
+    "Paraíba": "Nordeste",
+    "Pernambuco": "Nordeste",
+    "Piauí": "Nordeste",
+    "Rio Grande do Norte": "Nordeste",
+    "Sergipe": "Nordeste",
+    "Espírito Santo": "Sudeste",
+    "Minas Gerais": "Sudeste",
+    "Rio de Janeiro": "Sudeste",
+    "São Paulo": "Sudeste",
+    "Paraná": "Sul",
+    "Rio Grande do Sul": "Sul",
+    "Santa Catarina": "Sul",
+    "Distrito Federal": "Centro-Oeste",
+    "Goiás": "Centro-Oeste",
+    "Mato Grosso": "Centro-Oeste",
+    "Mato Grosso do Sul": "Centro-Oeste",
 }
+df["regiao_ibge"] = df["nome_unidade_federativa"].map(regioes)
 
-matriz_correlacao = matriz_correlacao.rename(
-    index=nomes_amigaveis, columns=nomes_amigaveis
-)
+# ------------------------------------------------------------------------------
+# FEATURE ENGINEERING & LIMITES DE EIXO
+# ------------------------------------------------------------------------------
+LIMITES = {}
 
-plt.figure(figsize=(11, 9))
-sns.heatmap(
-    matriz_correlacao,
-    cmap="coolwarm",
-    vmin=-1,
-    vmax=1,
-    annot=True,
-    fmt=".2f",
-    linewidths=0.5,
-    square=True,
-)
-plt.title(
-    "Matriz de Correlação entre Indicadores Sócioeconômicos e de Saúde",
-    fontsize=14,
-    weight="bold",
-    pad=20,
-)
-plt.tight_layout()
-plt.show()
+# Taxas base
+if "media_leitos_uti_sus" in df.columns:
+    df["leitos_uti_sus_100k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 100000
+    df["leitos_uti_sus_1k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 1000
+    LIMITES["max_uti_1k"] = df["leitos_uti_sus_1k"].max() * 1.1
+    LIMITES["max_uti_100k"] = df["leitos_uti_sus_100k"].max() * 1.1
+
+if "media_leitos_uti_nao_sus" in df.columns:
+    df["leitos_uti_privado_100k"] = (
+        df["media_leitos_uti_nao_sus"] / df["populacao"]
+    ) * 100000
+
+if "media_leitos_enf_sus" in df.columns:
+    df["leitos_enf_sus_1k"] = (df["media_leitos_enf_sus"] / df["populacao"]) * 1000
+    LIMITES["max_enf"] = df["leitos_enf_sus_1k"].max() * 1.1
+
+if "obitos_evitaveis" in df.columns:
+    df["mortalidade_evitavel_100k"] = (
+        df["obitos_evitaveis"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_mort"] = df["mortalidade_evitavel_100k"].max() * 1.1
+
+if "internacoes" in df.columns:
+    df["internacoes_100k"] = (df["internacoes"] / df["populacao"]) * 100000
+    LIMITES["max_int"] = df["internacoes_100k"].max() * 1.1
+
+if "media_equip_manut_vida_sus" in df.columns:
+    df["equip_vida_sus_100k"] = (
+        df["media_equip_manut_vida_sus"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_equip"] = df["equip_vida_sus_100k"].max() * 1.1
+
+# Métricas Importadas da Análise Macro (Seaborn)
+if "obitos_hospitalares" in df.columns and "obitos_evitaveis" in df.columns:
+    df["pct_mortes_evitaveis"] = (
+        df["obitos_evitaveis"] / df["obitos_hospitalares"]
+    ) * 100
+    LIMITES["max_pct_evit"] = df["pct_mortes_evitaveis"].max() * 1.1
+
+if "dias_internacao" in df.columns and "internacoes" in df.columns:
+    df["dias_por_internacao"] = df["dias_internacao"] / df["internacoes"]
+    LIMITES["max_dias_por_int"] = df["dias_por_internacao"].max() * 1.1
+
+if "pib_milhares" in df.columns:
+    df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
+    LIMITES["max_pib"] = df["pib_per_capita_absoluto"].max() * 1.1
+
+# Proporções
+if "media_leitos_uti_sus" in df.columns and "media_leitos_uti_nao_sus" in df.columns:
+    df["total_uti"] = df["media_leitos_uti_sus"] + df["media_leitos_uti_nao_sus"]
+    df["pct_uti_sus"] = np.where(
+        df["total_uti"] > 0, (df["media_leitos_uti_sus"] / df["total_uti"]) * 100, 0
+    )
+
+# NOVAS TAXAS (Colapso e Letalidade)
+if "internacoes_sus_total" in df.columns:
+    df["internacoes_sus_100k"] = (
+        df["internacoes_sus_total"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_int_sus"] = df["internacoes_sus_100k"].max() * 1.1
+
+if "obitos_domicilio_geral" in df.columns:
+    df["obitos_domicilio_100k"] = (
+        df["obitos_domicilio_geral"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_obitos_dom"] = df["obitos_domicilio_100k"].max() * 1.1
+
+if "Cap IX_geral" in df.columns:
+    df["cap_ix_100k"] = (df["Cap IX_geral"] / df["populacao"]) * 100000
+    LIMITES["max_cap_ix"] = df["cap_ix_100k"].max() * 1.1
+
+if "obitos_hospital_geral" in df.columns:
+    df["obitos_hospital_100k"] = (
+        df["obitos_hospital_geral"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_obitos_hosp"] = df["obitos_hospital_100k"].max() * 1.1
+
+if "dias_internacao_sus_total" in df.columns:
+    df["dias_internacao_sus_100k"] = (
+        df["dias_internacao_sus_total"] / df["populacao"]
+    ) * 100000
+    LIMITES["max_dias_int"] = df["dias_internacao_sus_100k"].max() * 1.1
+
+if "idhm" in df.columns:
+    LIMITES["min_idhm"] = df["idhm"].min() * 0.95
+    LIMITES["max_idhm"] = df["idhm"].max() * 1.05
+
+if "indice_gini" in df.columns:
+    LIMITES["min_gini"] = df["indice_gini"].min() * 0.95
+    LIMITES["max_gini"] = df["indice_gini"].max() * 1.05
+
+print("[2/2] Dados processados com sucesso!\n")
 
 
 # ==============================================================================
-# PARTE IV: ANÁLISE VISUAL DE INFRAESTRUTURA (LEITOS E EQUIPAMENTOS CRÍTICOS)
+# 2. FUNÇÕES GERADORAS DE GRÁFICOS DINÂMICOS
 # ==============================================================================
-print("A gerar gráficos estruturais de Infraestrutura...")
 
-# Agrupamento e preparação de dados por UF ordenados pela taxa de óbitos
-df_uf_infra = (
-    df.groupby("nome_unidade_federativa")[
-        [
-            "taxa_obitos_100k",
-            "media_leitos_uti_sus",
-            "media_leitos_uti_nao_sus",
-            "media_equip_manut_vida_sus",
-        ]
+
+def gerador_grafico(
+    df_dados,
+    x_col,
+    y_col,
+    modo,
+    titulo_animado,
+    titulo_consol,
+    color="regiao_ibge",
+    size=None,
+    max_x=None,
+    max_y=None,
+    min_x=0,
+    min_y=0,
+    discrete_colors=px.colors.qualitative.Safe,
+):
+    """Função mestre para evitar repetição de código no Plotly"""
+    if x_col not in df_dados.columns or y_col not in df_dados.columns:
+        print(f"\n[ERRO] Variáveis '{x_col}' ou '{y_col}' não encontradas no dataset.")
+        return
+
+    print("A renderizar gráfico...")
+    if modo == "consolidado":
+        data = (
+            df_dados.groupby(["nome_unidade_federativa", "regiao_ibge"])
+            .mean(numeric_only=True)
+            .reset_index()
+        )
+        kwargs = {}
+        titulo = titulo_consol
+    else:
+        data = df_dados
+        kwargs = {
+            "animation_frame": "ano",
+            "animation_group": "nome_unidade_federativa",
+        }
+        if max_x:
+            kwargs["range_x"] = [min_x, max_x]
+        if max_y:
+            kwargs["range_y"] = [min_y, max_y]
+        titulo = titulo_animado
+
+    if size and size in data.columns:
+        kwargs["size"] = size
+        kwargs["size_max"] = 45
+
+    fig = px.scatter(
+        data,
+        x=x_col,
+        y=y_col,
+        color=color,
+        hover_name="nome_unidade_federativa",
+        trendline="ols",
+        title=titulo,
+        color_discrete_sequence=discrete_colors,
+        **kwargs,
+    )
+    fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color="black")))
+    fig.update_layout(template="plotly_white")
+    fig.show()
+
+
+# --- BLOCO A: CLÍNICAS ---
+def graf_alocacao_reativa(modo):
+    gerador_grafico(
+        df,
+        "leitos_uti_sus_1k",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Alocação Reativa: Maior mortalidade induz mais UTIs</b>",
+        "<b>[MÉDIA GERAL] Alocação Reativa: Maior mortalidade induz mais UTIs</b>",
+        max_x=LIMITES.get("max_uti_1k"),
+        max_y=LIMITES.get("max_mort"),
+    )
+
+
+def graf_fator_protecao(modo):
+    gerador_grafico(
+        df,
+        "internacoes_100k",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Acesso Hospitalar Estruturado previne Mortes Agudas</b>",
+        "<b>[MÉDIA GERAL] Acesso Hospitalar Estruturado previne Mortes Agudas</b>",
+        max_x=LIMITES.get("max_int"),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=px.colors.qualitative.Vivid,
+    )
+
+
+def graf_enfermaria(modo):
+    gerador_grafico(
+        df,
+        "leitos_enf_sus_1k",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Especialização: Sem correlação com Enfermaria</b>",
+        "<b>[MÉDIA GERAL] Especialização: Sem correlação com Enfermaria</b>",
+        max_x=LIMITES.get("max_enf"),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=["#7F8C8D"],
+    )
+
+
+# --- BLOCO B: VIESES SOCIAIS E MACROECONOMIA ---
+def graf_paradoxo_regioes(modo):
+    gerador_grafico(
+        df,
+        "leitos_uti_sus_100k",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Paradoxo Regional: Cargas diferentes</b>",
+        "<b>[MÉDIA GERAL] Paradoxo Regional: Cargas diferentes</b>",
+        size="populacao",
+        max_x=LIMITES.get("max_uti_100k"),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=px.colors.qualitative.Prism,
+    )
+
+
+def graf_vies_confundimento(modo):
+    gerador_grafico(
+        df,
+        "idhm",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Viés Socioeconômico: Mortalidade vs IDHM (Tamanho = UTIs)</b>",
+        "<b>[MÉDIA GERAL] Viés Socioeconômico: Mortalidade vs IDHM (Tamanho = UTIs)</b>",
+        size="leitos_uti_sus_100k",
+        min_x=LIMITES.get("min_idhm", 0),
+        max_x=LIMITES.get("max_idhm", 1),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=px.colors.qualitative.Bold,
+    )
+
+
+def graf_gini_mortalidade(modo):
+    gerador_grafico(
+        df,
+        "indice_gini",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Desigualdade vs Mortalidade (GINI)</b>",
+        "<b>[MÉDIA GERAL] Desigualdade vs Mortalidade (GINI)</b>",
+        min_x=LIMITES.get("min_gini", 0),
+        max_x=LIMITES.get("max_gini", 1),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=px.colors.qualitative.Pastel,
+    )
+
+
+def graf_pib_mortalidade(modo):
+    gerador_grafico(
+        df,
+        "pib_per_capita_absoluto",
+        "mortalidade_evitavel_100k",
+        modo,
+        "<b>[ANIMADO] Riqueza Absoluta vs Mortalidade (Tamanho = IDHM)</b>",
+        "<b>[MÉDIA GERAL] Riqueza Absoluta vs Mortalidade (Tamanho = IDHM)</b>",
+        size="idhm",
+        max_x=LIMITES.get("max_pib"),
+        max_y=LIMITES.get("max_mort"),
+        discrete_colors=px.colors.qualitative.Vivid,
+    )
+
+
+def graf_taxa_evitabilidade(modo):
+    gerador_grafico(
+        df,
+        "idhm",
+        "pct_mortes_evitaveis",
+        modo,
+        "<b>[ANIMADO] IDHM vs Taxa de Evitabilidade (% de Óbitos Evitáveis)</b>",
+        "<b>[MÉDIA GERAL] IDHM vs Taxa de Evitabilidade (% de Óbitos Evitáveis)</b>",
+        min_x=LIMITES.get("min_idhm", 0),
+        max_x=LIMITES.get("max_idhm", 1),
+        max_y=LIMITES.get("max_pct_evit", 100),
+        discrete_colors=px.colors.qualitative.Prism,
+    )
+
+
+# --- BLOCO C: COLAPSO E GRAVIDADE ---
+def graf_prova_colapso(modo):
+    gerador_grafico(
+        df,
+        "internacoes_sus_100k",
+        "obitos_domicilio_100k",
+        modo,
+        "<b>[ANIMADO] Prova do Colapso: Internações vs Mortes em Casa</b>",
+        "<b>[MÉDIA GERAL] Prova do Colapso: Internações vs Mortes em Casa</b>",
+        max_x=LIMITES.get("max_int_sus"),
+        max_y=LIMITES.get("max_obitos_dom"),
+        discrete_colors=px.colors.qualitative.Pastel,
+    )
+
+
+def graf_corrida_relogio(modo):
+    gerador_grafico(
+        df,
+        "equip_vida_sus_100k",
+        "cap_ix_100k",
+        modo,
+        "<b>[ANIMADO] Equipamentos de Vida vs Infartos/AVCs</b>",
+        "<b>[MÉDIA GERAL] Equipamentos de Vida vs Infartos/AVCs</b>",
+        size="populacao",
+        max_x=LIMITES.get("max_equip"),
+        max_y=LIMITES.get("max_cap_ix"),
+        discrete_colors=px.colors.qualitative.Vivid,
+    )
+
+
+def graf_gargalo_gravidade(modo):
+    df_temp = df.copy()
+    if "leitos_uti_sus_100k" in df_temp.columns:
+        df_temp["tamanho_bolha"] = df_temp["leitos_uti_sus_100k"].fillna(0) + 1
+    gerador_grafico(
+        df_temp,
+        "dias_internacao_sus_100k",
+        "obitos_hospital_100k",
+        modo,
+        "<b>[ANIMADO] O Gargalo: Dias de Internação vs Letalidade Hospitalar</b>",
+        "<b>[MÉDIA GERAL] O Gargalo: Tempo de Espera e Mortalidade (Tamanho = UTIs)</b>",
+        size="tamanho_bolha" if "tamanho_bolha" in df_temp.columns else None,
+        max_x=LIMITES.get("max_dias_int"),
+        max_y=LIMITES.get("max_obitos_hosp"),
+        discrete_colors=px.colors.qualitative.Prism,
+    )
+
+
+# --- BLOCO D: VISÕES GLOBAIS PANORÂMICAS ---
+def graf_evolucao_nacional_linha():
+    print("A renderizar Evolução Nacional...")
+    evolucao = df.groupby("ano")[["obitos_evitaveis", "populacao"]].sum().reset_index()
+    evolucao["taxa_obitos_100k"] = (
+        evolucao["obitos_evitaveis"] / evolucao["populacao"]
+    ) * 100000
+    fig = px.line(
+        evolucao,
+        x="ano",
+        y="taxa_obitos_100k",
+        markers=True,
+        title="<b>Evolução Nacional da Taxa de Óbitos Evitáveis (por 100k hab.)</b>",
+    )
+    fig.update_traces(line=dict(color="darkred", width=4), marker=dict(size=12))
+    fig.update_layout(
+        template="plotly_white",
+        xaxis_title="Ano",
+        yaxis_title="Taxa Nacional de Óbitos Evitáveis",
+    )
+    fig.show()
+
+
+def graf_mix_publico_privado(modo):
+    if "pct_uti_sus" not in df.columns:
+        return print("[ERRO] Variável não encontrada.")
+    print("A renderizar gráfico...")
+    if modo == "consolidado":
+        data = (
+            df.groupby(["nome_unidade_federativa", "regiao_ibge"])[["pct_uti_sus"]]
+            .mean(numeric_only=True)
+            .reset_index()
+            .sort_values(by="pct_uti_sus")
+        )
+        kwargs = {}
+        titulo = "<b>[MÉDIA GERAL] Assimetria do Mix Público-Privado (Dependência do SUS)</b>"
+    else:
+        data = df.sort_values(by=["ano", "regiao_ibge", "pct_uti_sus"])
+        kwargs = {
+            "animation_frame": "ano",
+            "animation_group": "nome_unidade_federativa",
+        }
+        titulo = "<b>[ANIMADO] Mix Público-Privado: Corrida da Dependência do SUS</b>"
+
+    fig = px.bar(
+        data,
+        x="pct_uti_sus",
+        y="nome_unidade_federativa",
+        color="regiao_ibge",
+        orientation="h",
+        range_x=[0, 100],
+        title=titulo,
+        color_discrete_sequence=px.colors.qualitative.Vivid,
+        **kwargs,
+    )
+    fig.add_vline(x=50, line_dash="dash", line_color="black")
+    fig.update_layout(
+        template="plotly_white", yaxis=dict(autorange="reversed"), height=750
+    )
+    fig.show()
+
+
+def graf_heatmap_regional():
+    print("A renderizar Mapa de Calor (Heatmap)...")
+    pivot_obitos = df.pivot_table(
+        index="nome_unidade_federativa",
+        columns="ano",
+        values="mortalidade_evitavel_100k",
+        aggfunc="mean",
+    )
+    fig = px.imshow(
+        pivot_obitos,
+        text_auto=".1f",
+        aspect="auto",
+        color_continuous_scale="YlOrRd",
+        title="<b>Mapa de Calor: Evolução da Taxa de Óbitos Evitáveis por UF e Ano</b>",
+    )
+    fig.update_layout(
+        xaxis_title="Ano",
+        yaxis_title="Unidade Federativa",
+        template="plotly_white",
+        height=700,
+    )
+    fig.show()
+
+
+def graf_matriz_correlacao():
+    print("A renderizar Matriz de Correlação...")
+    cols = [
+        "mortalidade_evitavel_100k",
+        "indice_gini",
+        "idhm",
+        "pib_per_capita_absoluto",
+        "pct_uti_sus",
+        "pct_mortes_evitaveis",
+        "dias_por_internacao",
+        "equip_vida_sus_100k",
     ]
-    .mean()
-    .sort_values(by="taxa_obitos_100k", ascending=True)
-    .reset_index()
-)
-
-# 10. COMPARAÇÃO REGIONAL: DISTRIBUIÇÃO DE LEITOS UTI (SUS VS NÃO-SUS)
-df_melted_leitos = df_uf_infra.melt(
-    id_vars=["nome_unidade_federativa", "taxa_obitos_100k"],
-    value_vars=["media_leitos_uti_sus", "media_leitos_uti_nao_sus"],
-    var_name="Tipo de Leito",
-    value_name="Quantidade Média de Leitos",
-)
-
-df_melted_leitos["Tipo de Leito"] = df_melted_leitos["Tipo de Leito"].map(
-    {
-        "media_leitos_uti_sus": "Leitos UTI SUS",
-        "media_leitos_uti_nao_sus": "Leitos UTI Não-SUS",
-    }
-)
-
-plt.figure(figsize=(14, 10))
-sns.barplot(
-    data=df_melted_leitos,
-    y="nome_unidade_federativa",
-    x="Quantidade Média de Leitos",
-    hue="Tipo de Leito",
-    palette=["#008080", "#E67E22"],  # Teal para SUS, Laranja para Não-SUS
-    edgecolor="black",
-    alpha=0.85,
-)
-plt.title(
-    "Disponibilidade Média de Leitos de UTI (SUS vs Não-SUS) por Unidade Federativa\n"
-    "(Ordenado de forma crescente pela Taxa de Óbitos)",
-    fontsize=14,
-    weight="bold",
-    pad=15,
-)
-plt.ylabel("Unidade Federativa")
-plt.xlabel("Capacidade Média de Leitos Hospitalares (Unidades)")
-plt.legend(title="Segmento Hospitalar", loc="lower right")
-plt.grid(True, linestyle=":", alpha=0.6)
-plt.tight_layout()
-plt.show()
+    cols_existentes = [c for c in cols if c in df.columns]
+    corr = df[cols_existentes].corr()
+    fig = px.imshow(
+        corr,
+        text_auto=".2f",
+        aspect="auto",
+        color_continuous_scale="RdBu_r",
+        zmin=-1,
+        zmax=1,
+        title="<b>Matriz de Correlação Global (Socioeconomia vs Saúde)</b>",
+    )
+    fig.update_layout(template="plotly_white", height=700)
+    fig.show()
 
 
-# 11. PANORAMA TEMPORAL: EXPANSÃO DE INFRAESTRUTURA VS TAXA DE ÓBITOS EVITÁVEIS
-evolucao_infra = (
-    df.groupby("ano")[
-        [
-            "taxa_obitos_100k",
-            "media_leitos_uti_sus",
-            "media_leitos_uti_nao_sus",
-            "media_equip_manut_vida_sus",
+def graf_eixo_duplo_historico():
+    print("A renderizar Gráfico de Eixo Duplo...")
+    evolucao = (
+        df.groupby("ano")[
+            [
+                "mortalidade_evitavel_100k",
+                "leitos_uti_sus_100k",
+                "leitos_uti_privado_100k",
+            ]
         ]
-    ]
-    .mean()
-    .reset_index()
-)
+        .mean()
+        .reset_index()
+    )
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(
+        go.Scatter(
+            x=evolucao["ano"],
+            y=evolucao["leitos_uti_sus_100k"],
+            name="UTIs SUS/100k",
+            line=dict(color="#008080", width=3),
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=evolucao["ano"],
+            y=evolucao["leitos_uti_privado_100k"],
+            name="UTIs Privadas/100k",
+            line=dict(color="#E67E22", width=3),
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=evolucao["ano"],
+            y=evolucao["mortalidade_evitavel_100k"],
+            name="Taxa Mortalidade/100k",
+            line=dict(color="darkred", width=4, dash="dot"),
+        ),
+        secondary_y=True,
+    )
+    fig.update_layout(
+        title_text="<b>Evolução Histórica: Expansão de Infraestrutura vs Mortalidade</b>",
+        template="plotly_white",
+        hovermode="x unified",
+    )
+    fig.update_yaxes(title_text="Oferta de UTIs", secondary_y=False)
+    fig.update_yaxes(title_text="Taxa de Mortalidade", secondary_y=True)
+    fig.show()
 
-fig, ax1 = plt.subplots(figsize=(13, 6))
 
-# Eixo da Esquerda (ax1) - Infraestrutura
-ln1 = ax1.plot(
-    evolucao_infra["ano"],
-    evolucao_infra["media_leitos_uti_sus"],
-    marker="s",
-    color="#008080",
-    linewidth=2.5,
-    label="Média Leitos UTI SUS",
-)
-ln2 = ax1.plot(
-    evolucao_infra["ano"],
-    evolucao_infra["media_leitos_uti_nao_sus"],
-    marker="^",
-    color="#E67E22",
-    linewidth=2.5,
-    label="Média Leitos UTI Não-SUS",
-)
-ln3 = ax1.plot(
-    evolucao_infra["ano"],
-    evolucao_infra["media_equip_manut_vida_sus"],
-    marker="x",
-    color="#7F8C8D",
-    linestyle=":",
-    linewidth=2,
-    label="Média Equipamentos SUS",
-)
+# --- ESTATÍSTICA ---
+def rodar_regressao_ols():
+    print("\n" + "=" * 50)
+    print("RESULTADO DO MODELO DE REGRESSÃO (OLS)")
+    print("=" * 50)
+    try:
+        X = df[["leitos_uti_sus_100k", "idhm", "indice_gini"]].dropna()
+        Y = df.loc[X.index, "mortalidade_evitavel_100k"]
+        X = sm.add_constant(X)
+        modelo_ols = sm.OLS(Y, X).fit()
+        print(modelo_ols.summary())
+    except Exception as e:
+        print(
+            f"Erro ao rodar regressão: {e}\n(Verifique se IDHM e Gini não têm nulos.)"
+        )
+    print("=" * 50 + "\n")
 
-ax1.set_xlabel("Ano", fontsize=11)
-ax1.set_ylabel(
-    "Volume de Infraestrutura Hospitalar (Média por Estado)",
-    color="black",
-    fontsize=11,
-)
-ax1.tick_params(axis="y", labelcolor="black")
 
-# Garante o grid apenas para o eixo principal
-ax1.grid(True, linestyle=":", alpha=0.5)
+# ==============================================================================
+# 3. INTERFACE DE TERMINAL
+# ==============================================================================
+def limpar_tela():
+    os.system("cls" if os.name == "nt" else "clear")
 
-# Eixo da Direita (ax2) - Mortalidade
-ax2 = ax1.twinx()
-ln4 = ax2.plot(
-    evolucao_infra["ano"],
-    evolucao_infra["taxa_obitos_100k"],
-    marker="o",
-    color="darkred",
-    linewidth=3,
-    linestyle="-.",
-    label="Taxa Óbitos/100k",
-)
-ax2.set_ylabel("Taxa de Óbitos Evitáveis (por 100k hab.)", color="darkred", fontsize=11)
-ax2.tick_params(axis="y", labelcolor="darkred")
 
-# CORREÇÃO DO ERRO: Desativa as linhas de grade do segundo eixo Y
-ax2.grid(False)
+def perguntar_modo():
+    print("\n   \033[93mComo deseja visualizar este gráfico?\033[0m")
+    print("   [1] \033[96mAnimado\033[0m (Evolução Ano a Ano)")
+    print("   [2] \033[95mVisão Geral\033[0m (Média Consolidada de Todos os Anos)")
+    while True:
+        resp = input("   👉 Escolha (1 ou 2) » ")
+        if resp in ["1", "2"]:
+            return "animado" if resp == "1" else "consolidado"
+        print("   Opção inválida.")
 
-# CORREÇÃO DA LEGENDA: Combina todas as linhas em uma única caixa de legenda
-reuniao_linhas = ln1 + ln2 + ln3 + ln4
-rotulos = [l.get_label() for l in reuniao_linhas]
-ax1.legend(reuniao_linhas, rotulos, loc="upper left", frameon=True)
 
-plt.title(
-    "Evolução Histórica Nacional: Expansão de Infraestrutura vs Redução de Mortalidade",
-    fontsize=14,
-    weight="bold",
-    pad=15,
-)
-fig.tight_layout()
-plt.show()
+def menu_principal():
+    COR_TITULO = "\033[95m"
+    COR_SECCAO = "\033[96m"
+    COR_OPCAO = "\033[92m"
+    COR_RESET = "\033[0m"
 
-print("\nAnálise Exploratória Completa Finalizada!")
+    while True:
+        limpar_tela()
+        print(
+            f"{COR_TITULO}╔════════════════════════════════════════════════════════════╗"
+        )
+        print(f"║     PAINEL DE ANÁLISE: SAÚDE PÚBLICA E MORTALIDADE         ║")
+        print(
+            f"╚════════════════════════════════════════════════════════════╝{COR_RESET}"
+        )
+
+        print(
+            f"\n {COR_SECCAO}📊 [BLOCO A] STORYTELLING & RELAÇÕES CLÍNICAS{COR_RESET}"
+        )
+        print(
+            f"   {COR_OPCAO}1.{COR_RESET} Alocação Reativa     --> UTIs vs Mortalidade Evitável"
+        )
+        print(
+            f"   {COR_OPCAO}2.{COR_RESET} Fator de Proteção    --> Internações vs Mortalidade"
+        )
+        print(
+            f"   {COR_OPCAO}3.{COR_RESET} Nível Complexidade   --> Enfermaria vs Mortalidade (0.00)"
+        )
+
+        print(f"\n {COR_SECCAO}🌍 [BLOCO B] MACROECONOMIA & VIÉS SOCIAL{COR_RESET}")
+        print(
+            f"   {COR_OPCAO}4.{COR_RESET} Paradoxo Regional    --> Carga Epidemiológica por População"
+        )
+        print(
+            f"   {COR_OPCAO}5.{COR_RESET} Viés IDHM            --> Relação Oculta entre IDHM e Saúde"
+        )
+        print(
+            f"   {COR_OPCAO}6.{COR_RESET} Viés Desigualdade    --> Índice de GINI vs Mortalidade"
+        )
+        print(
+            f"   {COR_OPCAO}7.{COR_RESET} Viés Riqueza (PIB)   --> PIB per Capita vs Mortalidade"
+        )
+        print(
+            f"   {COR_OPCAO}8.{COR_RESET} Evitabilidade        --> IDHM vs % de Mortes Evitáveis"
+        )
+
+        print(f"\n {COR_SECCAO}🚨 [BLOCO C] COLAPSO E LETALIDADE{COR_RESET}")
+        print(
+            f"   {COR_OPCAO}9.{COR_RESET} Prova do Colapso     --> Internações vs Morte em Domicílio"
+        )
+        print(
+            f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças do Coração/AVC"
+        )
+        print(
+            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Dias Internados vs Morte no Hospital"
+        )
+
+        print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
+        print(
+            f"   {COR_OPCAO}12.{COR_RESET} Evolução Nacional   --> Linha do Tempo (Taxa Brasil)"
+        )
+        print(
+            f"   {COR_OPCAO}13.{COR_RESET} Mix Público/Privado --> Corrida de Barras (% de UTI SUS)"
+        )
+        print(
+            f"   {COR_OPCAO}14.{COR_RESET} Mapa de Calor       --> Evolução Regional por Ano"
+        )
+        print(
+            f"   {COR_OPCAO}15.{COR_RESET} Matriz de Correlação--> Interação de Todas as Variáveis"
+        )
+        print(
+            f"   {COR_OPCAO}16.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade no Tempo"
+        )
+
+        print(f"\n {COR_SECCAO}⚙️  [BLOCO E] MODELAÇÃO MATEMÁTICA{COR_RESET}")
+        print(
+            f"   {COR_OPCAO}17.{COR_RESET} Executar Regressão OLS (Sumário Estatístico no Terminal)"
+        )
+
+        print(
+            f"\n {COR_TITULO}────────────────────────────────────────────────────────────"
+        )
+        print(f"   {COR_OPCAO}0. Sair do Programa{COR_RESET}")
+        print(
+            f"{COR_TITULO}────────────────────────────────────────────────────────────{COR_RESET}"
+        )
+
+        try:
+            escolha = input(f"\n👉 Selecione o Gráfico/Ação: {COR_OPCAO}")
+            print(f"{COR_RESET}", end="")
+        except (KeyboardInterrupt, EOFError):
+            print("\n\nPrograma interrompido. Até logo!")
+            sys.exit()
+
+        # Lógica de Encaminhamento
+        if escolha in [str(i) for i in range(1, 12)]:
+            modo_selecionado = perguntar_modo()
+            if escolha == "1":
+                graf_alocacao_reativa(modo_selecionado)
+            elif escolha == "2":
+                graf_fator_protecao(modo_selecionado)
+            elif escolha == "3":
+                graf_enfermaria(modo_selecionado)
+            elif escolha == "4":
+                graf_paradoxo_regioes(modo_selecionado)
+            elif escolha == "5":
+                graf_vies_confundimento(modo_selecionado)
+            elif escolha == "6":
+                graf_gini_mortalidade(modo_selecionado)
+            elif escolha == "7":
+                graf_pib_mortalidade(modo_selecionado)
+            elif escolha == "8":
+                graf_taxa_evitabilidade(modo_selecionado)
+            elif escolha == "9":
+                graf_prova_colapso(modo_selecionado)
+            elif escolha == "10":
+                graf_corrida_relogio(modo_selecionado)
+            elif escolha == "11":
+                graf_gargalo_gravidade(modo_selecionado)
+            input("\nPressione [ENTER] para voltar ao menu...")
+
+        elif escolha in ["12", "13", "14", "15", "16"]:
+            if escolha == "12":
+                graf_evolucao_nacional_linha()
+            elif escolha == "13":
+                modo_selecionado = perguntar_modo()
+                graf_mix_publico_privado(modo_selecionado)
+            elif escolha == "14":
+                graf_heatmap_regional()
+            elif escolha == "15":
+                graf_matriz_correlacao()
+            elif escolha == "16":
+                graf_eixo_duplo_historico()
+            input("\nPressione [ENTER] para voltar ao menu...")
+
+        elif escolha == "17":
+            limpar_tela()
+            rodar_regressao_ols()
+            input("\nPressione [ENTER] para voltar ao menu principal...")
+
+        elif escolha == "0":
+            limpar_tela()
+            print("\n[INFO] Programa encerrado com sucesso. Até à próxima!\n")
+            sys.exit()
+        else:
+            print("\n[ERRO] Opção inválida! Escolha de 0 a 17.")
+            input("Pressione [ENTER] para tentar novamente...")
+
+
+if __name__ == "__main__":
+    menu_principal()
