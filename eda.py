@@ -40,6 +40,10 @@ colunas_numericas = [
     "dias_internacao_sus_total",
     "obitos_hospitalares",
     "dias_internacao",
+    "2. Causas mal definidas",
+    "obitos_outro_estab_saude",
+    "Cap IX_hospital",
+    "media_equip_diag_imagem_sus",
 ]
 
 for col in colunas_numericas:
@@ -84,55 +88,64 @@ regioes = {
 }
 df["regiao_ibge"] = df["nome_unidade_federativa"].map(regioes)
 
+# --- MAPA DE CORES PADRONIZADO ---
+CORES_REGIOES = {
+    "Norte": "#2ECC71",  # Verde
+    "Nordeste": "#E74C3C",  # Vermelho
+    "Sudeste": "#3498DB",  # Azul
+    "Centro-Oeste": "#F1C40F",  # Amarelo
+    "Sul": "#9B59B6",  # Roxo
+}
+
+# O Truque de Cores Contínuas para a Linha Geral
+mapa_regioes_id = {"Norte": 0, "Nordeste": 1, "Sudeste": 2, "Centro-Oeste": 3, "Sul": 4}
+df["regiao_id"] = df["regiao_ibge"].map(mapa_regioes_id)
+# Escala contínua exata mapeada para os IDs acima (0 a 4)
+ESCALA_CONTINUA_REGIOES = [
+    CORES_REGIOES["Norte"],
+    CORES_REGIOES["Nordeste"],
+    CORES_REGIOES["Sudeste"],
+    CORES_REGIOES["Centro-Oeste"],
+    CORES_REGIOES["Sul"],
+]
+
 # ------------------------------------------------------------------------------
-# FEATURE ENGINEERING & LIMITES DE EIXO
+# FEATURE ENGINEERING & LIMITES DE EIXO (VERSÃO OTIMIZADA)
 # ------------------------------------------------------------------------------
 LIMITES = {}
 
-if "media_leitos_uti_sus" in df.columns:
-    df["leitos_uti_sus_100k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 100000
-    df["leitos_uti_sus_1k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 1000
-    LIMITES["max_uti_1k"] = df["leitos_uti_sus_1k"].max() * 1.1
-    LIMITES["max_uti_100k"] = df["leitos_uti_sus_100k"].max() * 1.1
+taxas_populacionais = [
+    ("media_leitos_uti_sus", "leitos_uti_sus_100k", 100000, "max_uti_100k"),
+    ("media_leitos_uti_sus", "leitos_uti_sus_1k", 1000, "max_uti_1k"),
+    ("media_leitos_uti_nao_sus", "leitos_uti_privado_100k", 100000, None),
+    ("media_leitos_enf_sus", "leitos_enf_sus_1k", 1000, "max_enf"),
+    ("obitos_evitaveis", "mortalidade_evitavel_100k", 100000, "max_mort"),
+    ("internacoes", "internacoes_100k", 100000, "max_int"),
+    ("media_equip_manut_vida_sus", "equip_vida_sus_100k", 100000, "max_equip"),
+    ("internacoes_sus_total", "internacoes_sus_100k", 100000, "max_int_sus"),
+    ("obitos_domicilio_geral", "obitos_domicilio_100k", 100000, "max_obitos_dom"),
+    ("Cap IX_geral", "cap_ix_100k", 100000, "max_cap_ix"),
+    ("obitos_hospital_geral", "obitos_hospital_100k", 100000, "max_obitos_hosp"),
+    ("dias_internacao_sus_total", "dias_internacao_sus_100k", 100000, "max_dias_int"),
+    ("2. Causas mal definidas", "causas_mal_definidas_100k", 100000, "max_mal_def"),
+    ("obitos_outro_estab_saude", "obitos_outro_estab_100k", 100000, "max_out_estab"),
+    ("Cap IX_hospital", "cap_ix_hospital_100k", 100000, "max_cap_ix_hosp"),
+]
 
-if "media_leitos_uti_nao_sus" in df.columns:
-    df["leitos_uti_privado_100k"] = (
-        df["media_leitos_uti_nao_sus"] / df["populacao"]
-    ) * 100000
+for col_origem, col_nova, mult, chave_limite in taxas_populacionais:
+    if col_origem in df.columns:
+        df[col_nova] = (df[col_origem] / df["populacao"]) * mult
+        if chave_limite:
+            LIMITES[chave_limite] = df[col_nova].max() * 1.1
 
-if "media_leitos_enf_sus" in df.columns:
-    df["leitos_enf_sus_1k"] = (df["media_leitos_enf_sus"] / df["populacao"]) * 1000
-    LIMITES["max_enf"] = df["leitos_enf_sus_1k"].max() * 1.1
-
-if "obitos_evitaveis" in df.columns:
-    df["mortalidade_evitavel_100k"] = (
-        df["obitos_evitaveis"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_mort"] = df["mortalidade_evitavel_100k"].max() * 1.1
-
-if "internacoes" in df.columns:
-    df["internacoes_100k"] = (df["internacoes"] / df["populacao"]) * 100000
-    LIMITES["max_int"] = df["internacoes_100k"].max() * 1.1
-
-if "media_equip_manut_vida_sus" in df.columns:
-    df["equip_vida_sus_100k"] = (
-        df["media_equip_manut_vida_sus"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_equip"] = df["equip_vida_sus_100k"].max() * 1.1
-
-if "obitos_hospitalares" in df.columns and "obitos_evitaveis" in df.columns:
-    df["pct_mortes_evitaveis"] = (
-        df["obitos_evitaveis"] / df["obitos_hospitalares"]
-    ) * 100
-    LIMITES["max_pct_evit"] = df["pct_mortes_evitaveis"].max() * 1.1
+# Outras proporções
+if "pib_milhares" in df.columns:
+    df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
+    LIMITES["max_pib"] = df["pib_per_capita_absoluto"].max() * 1.1
 
 if "dias_internacao" in df.columns and "internacoes" in df.columns:
     df["dias_por_internacao"] = df["dias_internacao"] / df["internacoes"]
     LIMITES["max_dias_por_int"] = df["dias_por_internacao"].max() * 1.1
-
-if "pib_milhares" in df.columns:
-    df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
-    LIMITES["max_pib"] = df["pib_per_capita_absoluto"].max() * 1.1
 
 if "media_leitos_uti_sus" in df.columns and "media_leitos_uti_nao_sus" in df.columns:
     df["total_uti"] = df["media_leitos_uti_sus"] + df["media_leitos_uti_nao_sus"]
@@ -140,41 +153,13 @@ if "media_leitos_uti_sus" in df.columns and "media_leitos_uti_nao_sus" in df.col
         df["total_uti"] > 0, (df["media_leitos_uti_sus"] / df["total_uti"]) * 100, 0
     )
 
-if "internacoes_sus_total" in df.columns:
-    df["internacoes_sus_100k"] = (
-        df["internacoes_sus_total"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_int_sus"] = df["internacoes_sus_100k"].max() * 1.1
-
-if "obitos_domicilio_geral" in df.columns:
-    df["obitos_domicilio_100k"] = (
-        df["obitos_domicilio_geral"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_obitos_dom"] = df["obitos_domicilio_100k"].max() * 1.1
-
-if "Cap IX_geral" in df.columns:
-    df["cap_ix_100k"] = (df["Cap IX_geral"] / df["populacao"]) * 100000
-    LIMITES["max_cap_ix"] = df["cap_ix_100k"].max() * 1.1
-
-if "obitos_hospital_geral" in df.columns:
-    df["obitos_hospital_100k"] = (
-        df["obitos_hospital_geral"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_obitos_hosp"] = df["obitos_hospital_100k"].max() * 1.1
-
-if "dias_internacao_sus_total" in df.columns:
-    df["dias_internacao_sus_100k"] = (
-        df["dias_internacao_sus_total"] / df["populacao"]
-    ) * 100000
-    LIMITES["max_dias_int"] = df["dias_internacao_sus_100k"].max() * 1.1
-
-if "idhm" in df.columns:
-    LIMITES["min_idhm"] = df["idhm"].min() * 0.95
-    LIMITES["max_idhm"] = df["idhm"].max() * 1.05
-
-if "indice_gini" in df.columns:
-    LIMITES["min_gini"] = df["indice_gini"].min() * 0.95
-    LIMITES["max_gini"] = df["indice_gini"].max() * 1.05
+for col, min_key, max_key in [
+    ("idhm", "min_idhm", "max_idhm"),
+    ("indice_gini", "min_gini", "max_gini"),
+]:
+    if col in df.columns:
+        LIMITES[min_key] = df[col].min() * 0.95
+        LIMITES[max_key] = df[col].max() * 1.05
 
 print("[2/2] Dados processados com sucesso!\n")
 
@@ -182,6 +167,38 @@ print("[2/2] Dados processados com sucesso!\n")
 # ==============================================================================
 # 2. FUNÇÕES GERADORAS DE GRÁFICOS DINÂMICOS
 # ==============================================================================
+# ==============================================================================
+# 2. FUNÇÕES GERADORAS DE GRÁFICOS DINÂMICOS
+# ==============================================================================
+
+# Dicionário mestre para formatar automaticamente todos os eixos e tooltips
+MAPA_NOMES = {
+    "leitos_uti_sus_100k": "Leitos UTI SUS (por 100k hab.)",
+    "leitos_uti_sus_1k": "Leitos UTI SUS (por 1k hab.)",
+    "leitos_uti_privado_100k": "Leitos UTI Privados (por 100k hab.)",
+    "leitos_enf_sus_1k": "Leitos Enf. SUS (por 1k hab.)",
+    "mortalidade_evitavel_100k": "Mortalidade Evitável (por 100k hab.)",
+    "internacoes_100k": "Total de Internações (por 100k hab.)",
+    "equip_vida_sus_100k": "Equip. Suporte à Vida SUS (por 100k hab.)",
+    "internacoes_sus_100k": "Internações no SUS (por 100k hab.)",
+    "obitos_domicilio_100k": "Óbitos em Domicílio (por 100k hab.)",
+    "cap_ix_100k": "Óbitos Cardiovasculares (por 100k hab.)",
+    "obitos_hospital_100k": "Óbitos Hospitalares (por 100k hab.)",
+    "dias_internacao_sus_100k": "Dias de Internação SUS (por 100k hab.)",
+    "causas_mal_definidas_100k": "Causas Mal Definidas (por 100k hab.)",
+    "obitos_outro_estab_100k": "Óbitos em UPAs/Outros (por 100k hab.)",
+    "cap_ix_hospital_100k": "Óbitos Cardiovasculares no Hospital (por 100k hab.)",
+    "idhm": "Índice de Desenv. Humano (IDHM)",
+    "indice_gini": "Índice de Desigualdade (Gini)",
+    "pib_per_capita_absoluto": "PIB per Capita (R$)",
+    "pct_uti_sus": "Dependência de UTIs do SUS (%)",
+    "pct_mortes_evitaveis": "Taxa de Mortes Evitáveis no Hospital (%)",
+    "dias_por_internacao": "Média de Dias por Internação",
+    "ano": "Ano",
+    "nome_unidade_federativa": "Unidade Federativa",
+    "regiao_ibge": "Região",
+    "taxa_obitos_100k": "Taxa Nacional de Óbitos Evitáveis",
+}
 
 
 def gerador_grafico(
@@ -199,28 +216,37 @@ def gerador_grafico(
     min_y=0,
     discrete_colors=px.colors.qualitative.Safe,
 ):
-    """Função mestre adaptada para animar a Linha Nacional corretamente"""
     if x_col not in df_dados.columns or y_col not in df_dados.columns:
-        print(f"\n[ERRO] Variáveis '{x_col}' ou '{y_col}' não encontradas no dataset.")
-        return
+        return print(
+            f"\n[ERRO] Variáveis '{x_col}' ou '{y_col}' não encontradas no dataset."
+        )
 
     print("A renderizar gráfico...")
-
-    # Criamos uma cópia para não alterar o DataFrame original
     data = df_dados.copy()
-    cor_grafico = color
-    escopo_tendencia = "trace"
+    escopo_tendencia, cor_grafico, kwargs = "trace", color, {}
 
     if modo == "consolidado":
         data = (
-            data.groupby(["nome_unidade_federativa", "regiao_ibge"])
+            data.groupby(["nome_unidade_federativa", "regiao_ibge", "regiao_id"])
             .mean(numeric_only=True)
             .reset_index()
         )
-        kwargs = {}
-        titulo = titulo_consol
-        escopo_tendencia = "overall"
-    else:
+        titulo, escopo_tendencia = titulo_consol, "overall"
+        fig = px.scatter(
+            data,
+            x=x_col,
+            y=y_col,
+            color=cor_grafico,
+            hover_name="nome_unidade_federativa",
+            trendline="ols",
+            trendline_scope=escopo_tendencia,
+            title=titulo,
+            color_discrete_map=CORES_REGIOES,
+            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
+            **kwargs,
+        )
+
+    elif modo == "animado_regional":
         kwargs = {
             "animation_frame": "ano",
             "animation_group": "nome_unidade_federativa",
@@ -229,40 +255,69 @@ def gerador_grafico(
             kwargs["range_x"] = [min_x, max_x]
         if max_y:
             kwargs["range_y"] = [min_y, max_y]
+        titulo = titulo_animado + " <br><sup>(Com Linhas de Tendência Regionais)</sup>"
+        fig = px.scatter(
+            data,
+            x=x_col,
+            y=y_col,
+            color=cor_grafico,
+            hover_name="nome_unidade_federativa",
+            trendline="ols",
+            trendline_scope="trace",
+            title=titulo,
+            color_discrete_map=CORES_REGIOES,
+            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
+            **kwargs,
+        )
 
-        if modo == "animado_nacional":
-            titulo = (
-                titulo_animado
-                + " <br><sup>(Tendência Nacional Dinâmica Ano a Ano)</sup>"
-            )
-            # O TRUQUE: Unificamos todos os estados numa única categoria para o Plotly animar a linha
-            data["Visão Nacional"] = "Brasil (Todos os Estados)"
-            cor_grafico = "Visão Nacional"
-            discrete_colors = ["#2C3E50"]  # Um azul escuro elegante e neutro
-            # Como agora só existe 1 categoria, a linha será geral e vai mover-se a cada ano!
+    elif modo == "animado_nacional":
+        kwargs = {
+            "animation_frame": "ano",
+            "animation_group": "nome_unidade_federativa",
+        }
+        if max_x:
+            kwargs["range_x"] = [min_x, max_x]
+        if max_y:
+            kwargs["range_y"] = [min_y, max_y]
+        titulo = (
+            titulo_animado + " <br><sup>(Tendência Nacional Dinâmica do Brasil)</sup>"
+        )
+        cor_grafico = "regiao_id"
 
-        else:  # "animado_regional"
-            titulo = (
-                titulo_animado + " <br><sup>(Com Linhas de Tendência Regionais)</sup>"
+        fig = px.scatter(
+            data,
+            x=x_col,
+            y=y_col,
+            color=cor_grafico,
+            hover_name="nome_unidade_federativa",
+            trendline="ols",
+            trendline_scope="trace",
+            title=titulo,
+            color_continuous_scale=ESCALA_CONTINUA_REGIOES,
+            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
+            **kwargs,
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Região",
+                tickmode="array",
+                tickvals=[0, 1, 2, 3, 4],
+                ticktext=["Norte", "Nordeste", "Sudeste", "Centro-Oeste", "Sul"],
+                len=0.6,
+                thickness=20,
             )
-            cor_grafico = color  # Mantém as cores separadas por região
+        )
 
     if size and size in data.columns:
-        kwargs["size"] = size
-        kwargs["size_max"] = 45
+        fig.update_traces(
+            marker=dict(
+                size=data[size],
+                sizemode="area",
+                sizeref=2.0 * max(data[size]) / (45.0**2),
+                sizemin=4,
+            )
+        )
 
-    fig = px.scatter(
-        data,
-        x=x_col,
-        y=y_col,
-        color=cor_grafico,
-        hover_name="nome_unidade_federativa",
-        trendline="ols",
-        trendline_scope=escopo_tendencia,
-        title=titulo,
-        color_discrete_sequence=discrete_colors,
-        **kwargs,
-    )
     fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color="black")))
     fig.update_layout(template="plotly_white")
     fig.show()
@@ -292,7 +347,6 @@ def graf_fator_protecao(modo):
         "<b>[MÉDIA GERAL] Acesso Hospitalar Estruturado previne Mortes Agudas</b>",
         max_x=LIMITES.get("max_int"),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=px.colors.qualitative.Vivid,
     )
 
 
@@ -306,7 +360,6 @@ def graf_enfermaria(modo):
         "<b>[MÉDIA GERAL] Especialização: Sem correlação com Enfermaria</b>",
         max_x=LIMITES.get("max_enf"),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=["#7F8C8D"],
     )
 
 
@@ -322,7 +375,6 @@ def graf_paradoxo_regioes(modo):
         size="populacao",
         max_x=LIMITES.get("max_uti_100k"),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=px.colors.qualitative.Prism,
     )
 
 
@@ -338,7 +390,6 @@ def graf_vies_confundimento(modo):
         min_x=LIMITES.get("min_idhm", 0),
         max_x=LIMITES.get("max_idhm", 1),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=px.colors.qualitative.Bold,
     )
 
 
@@ -353,7 +404,6 @@ def graf_gini_mortalidade(modo):
         min_x=LIMITES.get("min_gini", 0),
         max_x=LIMITES.get("max_gini", 1),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=px.colors.qualitative.Pastel,
     )
 
 
@@ -368,22 +418,20 @@ def graf_pib_mortalidade(modo):
         size="idhm",
         max_x=LIMITES.get("max_pib"),
         max_y=LIMITES.get("max_mort"),
-        discrete_colors=px.colors.qualitative.Vivid,
     )
 
 
-def graf_taxa_evitabilidade(modo):
+def graf_apagao_diagnostico(modo):
     gerador_grafico(
         df,
         "idhm",
-        "pct_mortes_evitaveis",
+        "causas_mal_definidas_100k",
         modo,
-        "<b>[ANIMADO] IDHM vs Taxa de Evitabilidade (% de Óbitos)</b>",
-        "<b>[MÉDIA GERAL] IDHM vs Taxa de Evitabilidade (% de Óbitos)</b>",
+        "<b>[ANIMADO] O Apagão Diagnóstico: IDHM vs Causas Mal Definidas</b>",
+        "<b>[MÉDIA GERAL] O Apagão Diagnóstico: A Pobreza mascara a Causa da Morte</b>",
         min_x=LIMITES.get("min_idhm", 0),
         max_x=LIMITES.get("max_idhm", 1),
-        max_y=LIMITES.get("max_pct_evit", 100),
-        discrete_colors=px.colors.qualitative.Prism,
+        max_y=LIMITES.get("max_mal_def"),
     )
 
 
@@ -391,14 +439,13 @@ def graf_taxa_evitabilidade(modo):
 def graf_prova_colapso(modo):
     gerador_grafico(
         df,
-        "internacoes_sus_100k",
-        "obitos_domicilio_100k",
+        "internacoes_100k",
+        "obitos_outro_estab_100k",
         modo,
-        "<b>[ANIMADO] Prova do Colapso: Internações vs Mortes em Casa</b>",
-        "<b>[MÉDIA GERAL] Prova do Colapso: Internações vs Mortes em Casa</b>",
-        max_x=LIMITES.get("max_int_sus"),
-        max_y=LIMITES.get("max_obitos_dom"),
-        discrete_colors=px.colors.qualitative.Pastel,
+        "<b>[ANIMADO] A Retenção Mortal: Internações vs Mortes em UPAs/Ambulâncias</b>",
+        "<b>[MÉDIA GERAL] A Retenção Mortal: A falta de camas no Hospital Principal</b>",
+        max_x=LIMITES.get("max_int"),
+        max_y=LIMITES.get("max_out_estab"),
     )
 
 
@@ -408,30 +455,28 @@ def graf_corrida_relogio(modo):
         "equip_vida_sus_100k",
         "cap_ix_100k",
         modo,
-        "<b>[ANIMADO] Equipamentos de Vida vs Infartos/AVCs</b>",
-        "<b>[MÉDIA GERAL] Equipamentos de Vida vs Infartos/AVCs</b>",
+        "<b>[ANIMADO] Equipamentos de Vida vs Infartos/AVCs Gerais</b>",
+        "<b>[MÉDIA GERAL] Equipamentos de Vida vs Infartos/AVCs Gerais</b>",
         size="populacao",
         max_x=LIMITES.get("max_equip"),
         max_y=LIMITES.get("max_cap_ix"),
-        discrete_colors=px.colors.qualitative.Vivid,
     )
 
 
 def graf_gargalo_gravidade(modo):
     df_temp = df.copy()
-    if "leitos_uti_sus_100k" in df_temp.columns:
-        df_temp["tamanho_bolha"] = df_temp["leitos_uti_sus_100k"].fillna(0) + 1
+    if "equip_vida_sus_100k" in df_temp.columns:
+        df_temp["tamanho_bolha"] = df_temp["equip_vida_sus_100k"].fillna(0) + 1
     gerador_grafico(
         df_temp,
-        "dias_internacao_sus_100k",
-        "obitos_hospital_100k",
+        "dias_por_internacao",
+        "cap_ix_hospital_100k",
         modo,
-        "<b>[ANIMADO] O Gargalo: Dias Internação vs Letalidade</b>",
-        "<b>[MÉDIA GERAL] O Gargalo: Tempo Espera e Mortalidade (Tamanho = UTIs)</b>",
+        "<b>[ANIMADO] O Gargalo da Fila: Dias p/ Internação vs Mortes Cardiovasculares</b>",
+        "<b>[MÉDIA GERAL] O Gargalo da Fila: (Tamanho Bolha = Equip. Suporte à Vida)</b>",
         size="tamanho_bolha" if "tamanho_bolha" in df_temp.columns else None,
-        max_x=LIMITES.get("max_dias_int"),
-        max_y=LIMITES.get("max_obitos_hosp"),
-        discrete_colors=px.colors.qualitative.Prism,
+        max_x=LIMITES.get("max_dias_por_int"),
+        max_y=LIMITES.get("max_cap_ix_hosp"),
     )
 
 
@@ -447,13 +492,10 @@ def graf_evolucao_nacional_linha():
         y="taxa_obitos_100k",
         markers=True,
         title="<b>Evolução Nacional da Taxa de Óbitos Evitáveis (por 100k hab.)</b>",
+        labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
     )
     fig.update_traces(line=dict(color="darkred", width=4), marker=dict(size=12))
-    fig.update_layout(
-        template="plotly_white",
-        xaxis_title="Ano",
-        yaxis_title="Taxa Nacional de Óbitos Evitáveis",
-    )
+    fig.update_layout(template="plotly_white")
     fig.show()
 
 
@@ -474,6 +516,7 @@ def graf_mix_publico_privado(modo):
             {"animation_frame": "ano", "animation_group": "nome_unidade_federativa"},
             "<b>[ANIMADO] Mix Público-Privado: Corrida da Dependência</b>",
         )
+
     fig = px.bar(
         data,
         x="pct_uti_sus",
@@ -482,12 +525,15 @@ def graf_mix_publico_privado(modo):
         orientation="h",
         range_x=[0, 100],
         title=titulo,
-        color_discrete_sequence=px.colors.qualitative.Vivid,
+        color_discrete_map=CORES_REGIOES,
+        labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
         **kwargs,
     )
     fig.add_vline(x=50, line_dash="dash", line_color="black")
     fig.update_layout(
-        template="plotly_white", yaxis=dict(autorange="reversed"), height=750
+        template="plotly_white",
+        yaxis=dict(autorange="reversed", categoryorder="total ascending"),
+        height=750,
     )
     fig.show()
 
@@ -505,13 +551,9 @@ def graf_heatmap_regional():
         aspect="auto",
         color_continuous_scale="YlOrRd",
         title="<b>Mapa de Calor: Taxa de Óbitos Evitáveis por UF e Ano</b>",
+        labels=dict(x="Ano", y="Unidade Federativa", color="Taxa de Óbitos"),
     )
-    fig.update_layout(
-        xaxis_title="Ano",
-        yaxis_title="Unidade Federativa",
-        template="plotly_white",
-        height=700,
-    )
+    fig.update_layout(template="plotly_white", height=700)
     fig.show()
 
 
@@ -522,11 +564,15 @@ def graf_matriz_correlacao():
         "idhm",
         "pib_per_capita_absoluto",
         "pct_uti_sus",
-        "pct_mortes_evitaveis",
         "dias_por_internacao",
         "equip_vida_sus_100k",
     ]
+    # Filtra as colunas que existem e calcula a correlação
     corr = df[[c for c in cols if c in df.columns]].corr()
+
+    # TRADUÇÃO DOS NOMES NA MATRIZ: Muda o nome das linhas e colunas
+    corr = corr.rename(columns=MAPA_NOMES, index=MAPA_NOMES)
+
     fig = px.imshow(
         corr,
         text_auto=".2f",
@@ -568,7 +614,7 @@ def graf_eixo_duplo_historico():
         go.Scatter(
             x=evolucao["ano"],
             y=evolucao["uti_sus"],
-            name="UTIs SUS/100k",
+            name="UTIs SUS (por 100k hab.)",
             line=dict(color="#008080", width=3),
         ),
         secondary_y=False,
@@ -577,7 +623,7 @@ def graf_eixo_duplo_historico():
         go.Scatter(
             x=evolucao["ano"],
             y=evolucao["uti_privado"],
-            name="UTIs Privadas/100k",
+            name="UTIs Privadas (por 100k hab.)",
             line=dict(color="#E67E22", width=3),
         ),
         secondary_y=False,
@@ -586,7 +632,7 @@ def graf_eixo_duplo_historico():
         go.Scatter(
             x=evolucao["ano"],
             y=evolucao["taxa_mort"],
-            name="Taxa Mortalidade/100k",
+            name="Taxa Mortalidade Evitável",
             line=dict(color="darkred", width=4, dash="dot"),
         ),
         secondary_y=True,
@@ -595,6 +641,57 @@ def graf_eixo_duplo_historico():
         title_text="<b>Evolução Histórica Nacional Real</b>",
         template="plotly_white",
         hovermode="x unified",
+    )
+    fig.update_xaxes(title_text="Ano")
+    fig.update_yaxes(title_text="Oferta de UTIs", secondary_y=False)
+    fig.update_yaxes(title_text="Taxa de Mortalidade", secondary_y=True)
+    fig.show()
+
+
+def graf_ranking_cid10():
+    print("A renderizar o Ranking de Causas (CID-10)...")
+    cols_cid = [
+        c
+        for c in df.columns
+        if c.startswith("Cap ") and not c.endswith("_y") and "ignorado" not in c.lower()
+    ]
+    if not cols_cid:
+        return print("\n[ERRO] Não foram encontradas colunas do CID-10 válidas.")
+
+    df_cid = df.groupby("ano")[cols_cid].sum().reset_index()
+    df_melt = df_cid.melt(
+        id_vars=["ano"],
+        value_vars=cols_cid,
+        var_name="Capitulo",
+        value_name="Total_Obitos",
+    )
+    df_melt["Capitulo"] = (
+        df_melt["Capitulo"]
+        .str.replace("_x", "", regex=False)
+        .str.replace("_geral", "", regex=False)
+    )
+    df_melt = df_melt[df_melt["Total_Obitos"] > 0]
+    df_melt = df_melt.sort_values(by=["ano", "Total_Obitos"], ascending=[True, True])
+    limite_max = df_melt["Total_Obitos"].max() * 1.15
+
+    fig = px.bar(
+        df_melt,
+        x="Total_Obitos",
+        y="Capitulo",
+        animation_frame="ano",
+        orientation="h",
+        title="<b>Ranking de Causas: Evolução dos Óbitos por Capítulo (CID-10)</b>",
+        labels={"Total_Obitos": "Volume de Óbitos", "Capitulo": "CID-10", "ano": "Ano"},
+        color="Capitulo",
+        text="Total_Obitos",
+    )
+    fig.update_traces(texttemplate="%{text:.3s}", textposition="outside")
+    fig.update_layout(
+        template="plotly_white",
+        showlegend=False,
+        height=800,
+        xaxis=dict(range=[0, limite_max]),
+        yaxis=dict(categoryorder="total ascending"),
     )
     fig.show()
 
@@ -618,73 +715,6 @@ def rodar_regressao_ols():
     print("=" * 50 + "\n")
 
 
-def graf_ranking_cid10():
-    print("A renderizar o Ranking de Causas (CID-10)...")
-
-    # 1. Encontrar as colunas do CID-10:
-    # - Que começam com 'Cap '
-    # - Que NÃO terminam em '_y' (remove duplicados)
-    # - Que NÃO contêm a palavra 'ignorado'
-    cols_cid = [
-        c
-        for c in df.columns
-        if c.startswith("Cap ") and not c.endswith("_y") and "ignorado" not in c.lower()
-    ]
-
-    if not cols_cid:
-        print("\n[ERRO] Não foram encontradas colunas do CID-10 válidas.")
-        return
-
-    # 2. Agrupar por ano e somar os valores para o Brasil inteiro
-    df_cid = df.groupby("ano")[cols_cid].sum().reset_index()
-
-    # 3. Transformar as colunas em linhas (Melt) para o Plotly entender
-    df_melt = df_cid.melt(
-        id_vars=["ano"],
-        value_vars=cols_cid,
-        var_name="Capitulo",
-        value_name="Total_Obitos",
-    )
-
-    # 4. Limpeza da Legenda: Remove o '_x' e o '_geral' para o gráfico ficar elegante
-    df_melt["Capitulo"] = df_melt["Capitulo"].str.replace("_x", "", regex=False)
-    df_melt["Capitulo"] = df_melt["Capitulo"].str.replace("_geral", "", regex=False)
-
-    # [OPCIONAL MAS RECOMENDADO]: Remover também as linhas onde o total de óbitos é zero
-    # Isso evita que categorias vazias fiquem empilhadas lá no fundo do eixo Y
-    df_melt = df_melt[df_melt["Total_Obitos"] > 0]
-
-    # 5. Ordenar os dados para a animação fluir corretamente
-    df_melt = df_melt.sort_values(by=["ano", "Total_Obitos"], ascending=[True, True])
-
-    # Descobrir o limite do eixo X para a barra não sair da tela
-    limite_max = df_melt["Total_Obitos"].max() * 1.15
-
-    # 6. Gerar a Corrida de Barras
-    fig = px.bar(
-        df_melt,
-        x="Total_Obitos",
-        y="Capitulo",
-        animation_frame="ano",
-        orientation="h",
-        title="<b>Ranking de Causas: Evolução dos Óbitos por Capítulo (CID-10)</b>",
-        labels={"Total_Obitos": "Volume Total de Óbitos", "Capitulo": "CID-10"},
-        color="Capitulo",
-        text="Total_Obitos",
-    )
-
-    # Formatação visual: números fora da barra e abreviados
-    fig.update_traces(texttemplate="%{text:.3s}", textposition="outside")
-    fig.update_layout(
-        template="plotly_white",
-        showlegend=False,
-        height=800,
-        xaxis=dict(range=[0, limite_max]),  # Eixo X fixo para a corrida funcionar
-        yaxis=dict(categoryorder="total ascending"),  # Mantém o maior no topo
-    )
-    fig.show()
-
-
 # ==============================================================================
 # 3. INTERFACE DE TERMINAL
 # ==============================================================================
@@ -693,15 +723,8 @@ def limpar_tela():
 
 
 def perguntar_modo_dispersao():
-    print("\n   \033[93mComo deseja visualizar as Linhas de Correlação?\033[0m")
     print(
-        "   [1] \033[96mAnimado (Linha Geral)\033[0m       - Evolução com a tendência do Brasil"
-    )
-    print(
-        "   [2] \033[96mAnimado (Linhas Regionais)\033[0m  - Evolução com a tendência de cada Região"
-    )
-    print(
-        "   [3] \033[95mVisão Geral Consolidada\033[0m     - Média Histórica Congelada (Todos os anos)"
+        "\n   \033[93mComo deseja visualizar as Linhas de Correlação?\033[0m\n   [1] \033[96mAnimado (Linha Geral)\033[0m       - Evolução com a tendência do Brasil\n   [2] \033[96mAnimado (Linhas Regionais)\033[0m  - Evolução com a tendência de cada Região\n   [3] \033[95mVisão Geral Consolidada\033[0m     - Média Histórica Congelada (Todos os anos)"
     )
     while True:
         resp = input("   👉 Escolha (1, 2 ou 3) » ")
@@ -715,15 +738,13 @@ def perguntar_modo_dispersao():
 
 
 def perguntar_modo_simples():
-    print("\n   \033[93mComo deseja visualizar este gráfico?\033[0m")
-    print("   [1] \033[96mAnimado\033[0m     - Evolução Ano a Ano")
-    print("   [2] \033[95mVisão Geral\033[0m - Média Consolidada de Todos os Anos")
+    print(
+        "\n   \033[93mComo deseja visualizar este gráfico?\033[0m\n   [1] \033[96mAnimado\033[0m     - Evolução Ano a Ano\n   [2] \033[95mVisão Geral\033[0m - Média Consolidada de Todos os Anos"
+    )
     while True:
         resp = input("   👉 Escolha (1 ou 2) » ")
-        if resp == "1":
-            return "animado"
-        if resp == "2":
-            return "consolidado"
+        if resp in ["1", "2"]:
+            return "animado" if resp == "1" else "consolidado"
         print("   Opção inválida.")
 
 
@@ -767,18 +788,18 @@ def menu_principal():
             f"   {COR_OPCAO}7.{COR_RESET} Viés Riqueza (PIB)   --> PIB per Capita vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}8.{COR_RESET} Evitabilidade        --> IDHM vs % de Mortes Evitáveis"
+            f"   {COR_OPCAO}8.{COR_RESET} Apagão Diagnóstico   --> IDHM vs Causas Mal Definidas"
         )
 
         print(f"\n {COR_SECCAO}🚨 [BLOCO C] COLAPSO E LETALIDADE{COR_RESET}")
         print(
-            f"   {COR_OPCAO}9.{COR_RESET} Prova do Colapso     --> Internações vs Morte em Domicílio"
+            f"   {COR_OPCAO}9.{COR_RESET} Prova do Colapso     --> Internações vs Morte em UPA/Ambulância"
         )
         print(
             f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças Cap IX"
         )
         print(
-            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Dias Internados vs Morte Hospitalar"
+            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Média de Dias Internados vs Morte Cardíaca"
         )
 
         print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
@@ -832,7 +853,7 @@ def menu_principal():
             elif escolha == "7":
                 graf_pib_mortalidade(modo)
             elif escolha == "8":
-                graf_taxa_evitabilidade(modo)
+                graf_apagao_diagnostico(modo)
             elif escolha == "9":
                 graf_prova_colapso(modo)
             elif escolha == "10":
