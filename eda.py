@@ -89,7 +89,6 @@ df["regiao_ibge"] = df["nome_unidade_federativa"].map(regioes)
 # ------------------------------------------------------------------------------
 LIMITES = {}
 
-# Taxas base
 if "media_leitos_uti_sus" in df.columns:
     df["leitos_uti_sus_100k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 100000
     df["leitos_uti_sus_1k"] = (df["media_leitos_uti_sus"] / df["populacao"]) * 1000
@@ -121,7 +120,6 @@ if "media_equip_manut_vida_sus" in df.columns:
     ) * 100000
     LIMITES["max_equip"] = df["equip_vida_sus_100k"].max() * 1.1
 
-# Métricas Importadas da Análise Macro (Seaborn)
 if "obitos_hospitalares" in df.columns and "obitos_evitaveis" in df.columns:
     df["pct_mortes_evitaveis"] = (
         df["obitos_evitaveis"] / df["obitos_hospitalares"]
@@ -136,14 +134,12 @@ if "pib_milhares" in df.columns:
     df["pib_per_capita_absoluto"] = (df["pib_milhares"] * 1000) / df["populacao"]
     LIMITES["max_pib"] = df["pib_per_capita_absoluto"].max() * 1.1
 
-# Proporções
 if "media_leitos_uti_sus" in df.columns and "media_leitos_uti_nao_sus" in df.columns:
     df["total_uti"] = df["media_leitos_uti_sus"] + df["media_leitos_uti_nao_sus"]
     df["pct_uti_sus"] = np.where(
         df["total_uti"] > 0, (df["media_leitos_uti_sus"] / df["total_uti"]) * 100, 0
     )
 
-# NOVAS TAXAS (Colapso e Letalidade)
 if "internacoes_sus_total" in df.columns:
     df["internacoes_sus_100k"] = (
         df["internacoes_sus_total"] / df["populacao"]
@@ -203,22 +199,28 @@ def gerador_grafico(
     min_y=0,
     discrete_colors=px.colors.qualitative.Safe,
 ):
-    """Função mestre para evitar repetição de código no Plotly"""
+    """Função mestre adaptada para animar a Linha Nacional corretamente"""
     if x_col not in df_dados.columns or y_col not in df_dados.columns:
         print(f"\n[ERRO] Variáveis '{x_col}' ou '{y_col}' não encontradas no dataset.")
         return
 
     print("A renderizar gráfico...")
+
+    # Criamos uma cópia para não alterar o DataFrame original
+    data = df_dados.copy()
+    cor_grafico = color
+    escopo_tendencia = "trace"
+
     if modo == "consolidado":
         data = (
-            df_dados.groupby(["nome_unidade_federativa", "regiao_ibge"])
+            data.groupby(["nome_unidade_federativa", "regiao_ibge"])
             .mean(numeric_only=True)
             .reset_index()
         )
         kwargs = {}
         titulo = titulo_consol
+        escopo_tendencia = "overall"
     else:
-        data = df_dados
         kwargs = {
             "animation_frame": "ano",
             "animation_group": "nome_unidade_federativa",
@@ -227,7 +229,23 @@ def gerador_grafico(
             kwargs["range_x"] = [min_x, max_x]
         if max_y:
             kwargs["range_y"] = [min_y, max_y]
-        titulo = titulo_animado
+
+        if modo == "animado_nacional":
+            titulo = (
+                titulo_animado
+                + " <br><sup>(Tendência Nacional Dinâmica Ano a Ano)</sup>"
+            )
+            # O TRUQUE: Unificamos todos os estados numa única categoria para o Plotly animar a linha
+            data["Visão Nacional"] = "Brasil (Todos os Estados)"
+            cor_grafico = "Visão Nacional"
+            discrete_colors = ["#2C3E50"]  # Um azul escuro elegante e neutro
+            # Como agora só existe 1 categoria, a linha será geral e vai mover-se a cada ano!
+
+        else:  # "animado_regional"
+            titulo = (
+                titulo_animado + " <br><sup>(Com Linhas de Tendência Regionais)</sup>"
+            )
+            cor_grafico = color  # Mantém as cores separadas por região
 
     if size and size in data.columns:
         kwargs["size"] = size
@@ -237,9 +255,10 @@ def gerador_grafico(
         data,
         x=x_col,
         y=y_col,
-        color=color,
+        color=cor_grafico,
         hover_name="nome_unidade_federativa",
         trendline="ols",
+        trendline_scope=escopo_tendencia,
         title=titulo,
         color_discrete_sequence=discrete_colors,
         **kwargs,
@@ -359,8 +378,8 @@ def graf_taxa_evitabilidade(modo):
         "idhm",
         "pct_mortes_evitaveis",
         modo,
-        "<b>[ANIMADO] IDHM vs Taxa de Evitabilidade (% de Óbitos Evitáveis)</b>",
-        "<b>[MÉDIA GERAL] IDHM vs Taxa de Evitabilidade (% de Óbitos Evitáveis)</b>",
+        "<b>[ANIMADO] IDHM vs Taxa de Evitabilidade (% de Óbitos)</b>",
+        "<b>[MÉDIA GERAL] IDHM vs Taxa de Evitabilidade (% de Óbitos)</b>",
         min_x=LIMITES.get("min_idhm", 0),
         max_x=LIMITES.get("max_idhm", 1),
         max_y=LIMITES.get("max_pct_evit", 100),
@@ -407,8 +426,8 @@ def graf_gargalo_gravidade(modo):
         "dias_internacao_sus_100k",
         "obitos_hospital_100k",
         modo,
-        "<b>[ANIMADO] O Gargalo: Dias de Internação vs Letalidade Hospitalar</b>",
-        "<b>[MÉDIA GERAL] O Gargalo: Tempo de Espera e Mortalidade (Tamanho = UTIs)</b>",
+        "<b>[ANIMADO] O Gargalo: Dias Internação vs Letalidade</b>",
+        "<b>[MÉDIA GERAL] O Gargalo: Tempo Espera e Mortalidade (Tamanho = UTIs)</b>",
         size="tamanho_bolha" if "tamanho_bolha" in df_temp.columns else None,
         max_x=LIMITES.get("max_dias_int"),
         max_y=LIMITES.get("max_obitos_hosp"),
@@ -418,7 +437,6 @@ def graf_gargalo_gravidade(modo):
 
 # --- BLOCO D: VISÕES GLOBAIS PANORÂMICAS ---
 def graf_evolucao_nacional_linha():
-    print("A renderizar Evolução Nacional...")
     evolucao = df.groupby("ano")[["obitos_evitaveis", "populacao"]].sum().reset_index()
     evolucao["taxa_obitos_100k"] = (
         evolucao["obitos_evitaveis"] / evolucao["populacao"]
@@ -442,7 +460,6 @@ def graf_evolucao_nacional_linha():
 def graf_mix_publico_privado(modo):
     if "pct_uti_sus" not in df.columns:
         return print("[ERRO] Variável não encontrada.")
-    print("A renderizar gráfico...")
     if modo == "consolidado":
         data = (
             df.groupby(["nome_unidade_federativa", "regiao_ibge"])[["pct_uti_sus"]]
@@ -450,16 +467,13 @@ def graf_mix_publico_privado(modo):
             .reset_index()
             .sort_values(by="pct_uti_sus")
         )
-        kwargs = {}
-        titulo = "<b>[MÉDIA GERAL] Assimetria do Mix Público-Privado (Dependência do SUS)</b>"
+        kwargs, titulo = {}, "<b>[MÉDIA GERAL] Assimetria do Mix Público-Privado</b>"
     else:
-        data = df.sort_values(by=["ano", "regiao_ibge", "pct_uti_sus"])
-        kwargs = {
-            "animation_frame": "ano",
-            "animation_group": "nome_unidade_federativa",
-        }
-        titulo = "<b>[ANIMADO] Mix Público-Privado: Corrida da Dependência do SUS</b>"
-
+        data, kwargs, titulo = (
+            df.sort_values(by=["ano", "regiao_ibge", "pct_uti_sus"]),
+            {"animation_frame": "ano", "animation_group": "nome_unidade_federativa"},
+            "<b>[ANIMADO] Mix Público-Privado: Corrida da Dependência</b>",
+        )
     fig = px.bar(
         data,
         x="pct_uti_sus",
@@ -479,7 +493,6 @@ def graf_mix_publico_privado(modo):
 
 
 def graf_heatmap_regional():
-    print("A renderizar Mapa de Calor (Heatmap)...")
     pivot_obitos = df.pivot_table(
         index="nome_unidade_federativa",
         columns="ano",
@@ -491,7 +504,7 @@ def graf_heatmap_regional():
         text_auto=".1f",
         aspect="auto",
         color_continuous_scale="YlOrRd",
-        title="<b>Mapa de Calor: Evolução da Taxa de Óbitos Evitáveis por UF e Ano</b>",
+        title="<b>Mapa de Calor: Taxa de Óbitos Evitáveis por UF e Ano</b>",
     )
     fig.update_layout(
         xaxis_title="Ano",
@@ -503,7 +516,6 @@ def graf_heatmap_regional():
 
 
 def graf_matriz_correlacao():
-    print("A renderizar Matriz de Correlação...")
     cols = [
         "mortalidade_evitavel_100k",
         "indice_gini",
@@ -514,8 +526,7 @@ def graf_matriz_correlacao():
         "dias_por_internacao",
         "equip_vida_sus_100k",
     ]
-    cols_existentes = [c for c in cols if c in df.columns]
-    corr = df[cols_existentes].corr()
+    corr = df[[c for c in cols if c in df.columns]].corr()
     fig = px.imshow(
         corr,
         text_auto=".2f",
@@ -523,30 +534,40 @@ def graf_matriz_correlacao():
         color_continuous_scale="RdBu_r",
         zmin=-1,
         zmax=1,
-        title="<b>Matriz de Correlação Global (Socioeconomia vs Saúde)</b>",
+        title="<b>Matriz de Correlação Global</b>",
     )
     fig.update_layout(template="plotly_white", height=700)
     fig.show()
 
 
 def graf_eixo_duplo_historico():
-    print("A renderizar Gráfico de Eixo Duplo...")
     evolucao = (
         df.groupby("ano")[
             [
-                "mortalidade_evitavel_100k",
-                "leitos_uti_sus_100k",
-                "leitos_uti_privado_100k",
+                "populacao",
+                "obitos_evitaveis",
+                "media_leitos_uti_sus",
+                "media_leitos_uti_nao_sus",
             ]
         ]
-        .mean()
+        .sum()
         .reset_index()
     )
+    evolucao["taxa_mort"] = (
+        evolucao["obitos_evitaveis"] / evolucao["populacao"]
+    ) * 100000
+    evolucao["uti_sus"] = (
+        evolucao["media_leitos_uti_sus"] / evolucao["populacao"]
+    ) * 100000
+    evolucao["uti_privado"] = (
+        evolucao["media_leitos_uti_nao_sus"] / evolucao["populacao"]
+    ) * 100000
+
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(
         go.Scatter(
             x=evolucao["ano"],
-            y=evolucao["leitos_uti_sus_100k"],
+            y=evolucao["uti_sus"],
             name="UTIs SUS/100k",
             line=dict(color="#008080", width=3),
         ),
@@ -555,7 +576,7 @@ def graf_eixo_duplo_historico():
     fig.add_trace(
         go.Scatter(
             x=evolucao["ano"],
-            y=evolucao["leitos_uti_privado_100k"],
+            y=evolucao["uti_privado"],
             name="UTIs Privadas/100k",
             line=dict(color="#E67E22", width=3),
         ),
@@ -564,38 +585,104 @@ def graf_eixo_duplo_historico():
     fig.add_trace(
         go.Scatter(
             x=evolucao["ano"],
-            y=evolucao["mortalidade_evitavel_100k"],
+            y=evolucao["taxa_mort"],
             name="Taxa Mortalidade/100k",
             line=dict(color="darkred", width=4, dash="dot"),
         ),
         secondary_y=True,
     )
     fig.update_layout(
-        title_text="<b>Evolução Histórica: Expansão de Infraestrutura vs Mortalidade</b>",
+        title_text="<b>Evolução Histórica Nacional Real</b>",
         template="plotly_white",
         hovermode="x unified",
     )
-    fig.update_yaxes(title_text="Oferta de UTIs", secondary_y=False)
-    fig.update_yaxes(title_text="Taxa de Mortalidade", secondary_y=True)
     fig.show()
 
 
 # --- ESTATÍSTICA ---
 def rodar_regressao_ols():
-    print("\n" + "=" * 50)
-    print("RESULTADO DO MODELO DE REGRESSÃO (OLS)")
-    print("=" * 50)
+    print("\n" + "=" * 50 + "\nRESULTADO DO MODELO DE REGRESSÃO (OLS)\n" + "=" * 50)
     try:
-        X = df[["leitos_uti_sus_100k", "idhm", "indice_gini"]].dropna()
-        Y = df.loc[X.index, "mortalidade_evitavel_100k"]
-        X = sm.add_constant(X)
-        modelo_ols = sm.OLS(Y, X).fit()
-        print(modelo_ols.summary())
-    except Exception as e:
-        print(
-            f"Erro ao rodar regressão: {e}\n(Verifique se IDHM e Gini não têm nulos.)"
+        df_reg = df.dropna(
+            subset=[
+                "leitos_uti_sus_100k",
+                "idhm",
+                "indice_gini",
+                "mortalidade_evitavel_100k",
+            ]
         )
+        X = sm.add_constant(df_reg[["leitos_uti_sus_100k", "idhm", "indice_gini"]])
+        print(sm.OLS(df_reg["mortalidade_evitavel_100k"], X).fit().summary())
+    except Exception as e:
+        print(f"Erro: {e}")
     print("=" * 50 + "\n")
+
+
+def graf_ranking_cid10():
+    print("A renderizar o Ranking de Causas (CID-10)...")
+
+    # 1. Encontrar as colunas do CID-10:
+    # - Que começam com 'Cap '
+    # - Que NÃO terminam em '_y' (remove duplicados)
+    # - Que NÃO contêm a palavra 'ignorado'
+    cols_cid = [
+        c
+        for c in df.columns
+        if c.startswith("Cap ") and not c.endswith("_y") and "ignorado" not in c.lower()
+    ]
+
+    if not cols_cid:
+        print("\n[ERRO] Não foram encontradas colunas do CID-10 válidas.")
+        return
+
+    # 2. Agrupar por ano e somar os valores para o Brasil inteiro
+    df_cid = df.groupby("ano")[cols_cid].sum().reset_index()
+
+    # 3. Transformar as colunas em linhas (Melt) para o Plotly entender
+    df_melt = df_cid.melt(
+        id_vars=["ano"],
+        value_vars=cols_cid,
+        var_name="Capitulo",
+        value_name="Total_Obitos",
+    )
+
+    # 4. Limpeza da Legenda: Remove o '_x' e o '_geral' para o gráfico ficar elegante
+    df_melt["Capitulo"] = df_melt["Capitulo"].str.replace("_x", "", regex=False)
+    df_melt["Capitulo"] = df_melt["Capitulo"].str.replace("_geral", "", regex=False)
+
+    # [OPCIONAL MAS RECOMENDADO]: Remover também as linhas onde o total de óbitos é zero
+    # Isso evita que categorias vazias fiquem empilhadas lá no fundo do eixo Y
+    df_melt = df_melt[df_melt["Total_Obitos"] > 0]
+
+    # 5. Ordenar os dados para a animação fluir corretamente
+    df_melt = df_melt.sort_values(by=["ano", "Total_Obitos"], ascending=[True, True])
+
+    # Descobrir o limite do eixo X para a barra não sair da tela
+    limite_max = df_melt["Total_Obitos"].max() * 1.15
+
+    # 6. Gerar a Corrida de Barras
+    fig = px.bar(
+        df_melt,
+        x="Total_Obitos",
+        y="Capitulo",
+        animation_frame="ano",
+        orientation="h",
+        title="<b>Ranking de Causas: Evolução dos Óbitos por Capítulo (CID-10)</b>",
+        labels={"Total_Obitos": "Volume Total de Óbitos", "Capitulo": "CID-10"},
+        color="Capitulo",
+        text="Total_Obitos",
+    )
+
+    # Formatação visual: números fora da barra e abreviados
+    fig.update_traces(texttemplate="%{text:.3s}", textposition="outside")
+    fig.update_layout(
+        template="plotly_white",
+        showlegend=False,
+        height=800,
+        xaxis=dict(range=[0, limite_max]),  # Eixo X fixo para a corrida funcionar
+        yaxis=dict(categoryorder="total ascending"),  # Mantém o maior no topo
+    )
+    fig.show()
 
 
 # ==============================================================================
@@ -605,44 +692,65 @@ def limpar_tela():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def perguntar_modo():
+def perguntar_modo_dispersao():
+    print("\n   \033[93mComo deseja visualizar as Linhas de Correlação?\033[0m")
+    print(
+        "   [1] \033[96mAnimado (Linha Geral)\033[0m       - Evolução com a tendência do Brasil"
+    )
+    print(
+        "   [2] \033[96mAnimado (Linhas Regionais)\033[0m  - Evolução com a tendência de cada Região"
+    )
+    print(
+        "   [3] \033[95mVisão Geral Consolidada\033[0m     - Média Histórica Congelada (Todos os anos)"
+    )
+    while True:
+        resp = input("   👉 Escolha (1, 2 ou 3) » ")
+        if resp == "1":
+            return "animado_nacional"
+        if resp == "2":
+            return "animado_regional"
+        if resp == "3":
+            return "consolidado"
+        print("   Opção inválida.")
+
+
+def perguntar_modo_simples():
     print("\n   \033[93mComo deseja visualizar este gráfico?\033[0m")
-    print("   [1] \033[96mAnimado\033[0m (Evolução Ano a Ano)")
-    print("   [2] \033[95mVisão Geral\033[0m (Média Consolidada de Todos os Anos)")
+    print("   [1] \033[96mAnimado\033[0m     - Evolução Ano a Ano")
+    print("   [2] \033[95mVisão Geral\033[0m - Média Consolidada de Todos os Anos")
     while True:
         resp = input("   👉 Escolha (1 ou 2) » ")
-        if resp in ["1", "2"]:
-            return "animado" if resp == "1" else "consolidado"
+        if resp == "1":
+            return "animado"
+        if resp == "2":
+            return "consolidado"
         print("   Opção inválida.")
 
 
 def menu_principal():
-    COR_TITULO = "\033[95m"
-    COR_SECCAO = "\033[96m"
-    COR_OPCAO = "\033[92m"
-    COR_RESET = "\033[0m"
+    COR_TITULO, COR_SECCAO, COR_OPCAO, COR_RESET = (
+        "\033[95m",
+        "\033[96m",
+        "\033[92m",
+        "\033[0m",
+    )
 
     while True:
         limpar_tela()
         print(
-            f"{COR_TITULO}╔════════════════════════════════════════════════════════════╗"
+            f"{COR_TITULO}╔════════════════════════════════════════════════════════════╗\n║     PAINEL DE ANÁLISE: SAÚDE PÚBLICA E MORTALIDADE         ║\n╚════════════════════════════════════════════════════════════╝{COR_RESET}"
         )
-        print(f"║     PAINEL DE ANÁLISE: SAÚDE PÚBLICA E MORTALIDADE         ║")
-        print(
-            f"╚════════════════════════════════════════════════════════════╝{COR_RESET}"
-        )
-
         print(
             f"\n {COR_SECCAO}📊 [BLOCO A] STORYTELLING & RELAÇÕES CLÍNICAS{COR_RESET}"
         )
         print(
-            f"   {COR_OPCAO}1.{COR_RESET} Alocação Reativa     --> UTIs vs Mortalidade Evitável"
+            f"   {COR_OPCAO}1.{COR_RESET} Alocação Reativa     --> UTIs vs Mortalidade"
         )
         print(
             f"   {COR_OPCAO}2.{COR_RESET} Fator de Proteção    --> Internações vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}3.{COR_RESET} Nível Complexidade   --> Enfermaria vs Mortalidade (0.00)"
+            f"   {COR_OPCAO}3.{COR_RESET} Nível Complexidade   --> Enfermaria vs Mortalidade"
         )
 
         print(f"\n {COR_SECCAO}🌍 [BLOCO B] MACROECONOMIA & VIÉS SOCIAL{COR_RESET}")
@@ -650,7 +758,7 @@ def menu_principal():
             f"   {COR_OPCAO}4.{COR_RESET} Paradoxo Regional    --> Carga Epidemiológica por População"
         )
         print(
-            f"   {COR_OPCAO}5.{COR_RESET} Viés IDHM            --> Relação Oculta entre IDHM e Saúde"
+            f"   {COR_OPCAO}5.{COR_RESET} Viés IDHM            --> IDHM vs Mortalidade"
         )
         print(
             f"   {COR_OPCAO}6.{COR_RESET} Viés Desigualdade    --> Índice de GINI vs Mortalidade"
@@ -667,10 +775,10 @@ def menu_principal():
             f"   {COR_OPCAO}9.{COR_RESET} Prova do Colapso     --> Internações vs Morte em Domicílio"
         )
         print(
-            f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças do Coração/AVC"
+            f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças Cap IX"
         )
         print(
-            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Dias Internados vs Morte no Hospital"
+            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Dias Internados vs Morte Hospitalar"
         )
 
         print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
@@ -684,85 +792,80 @@ def menu_principal():
             f"   {COR_OPCAO}14.{COR_RESET} Mapa de Calor       --> Evolução Regional por Ano"
         )
         print(
-            f"   {COR_OPCAO}15.{COR_RESET} Matriz de Correlação--> Interação de Todas as Variáveis"
+            f"   {COR_OPCAO}15.{COR_RESET} Matriz de Correlação--> Interação Global de Variáveis"
         )
         print(
-            f"   {COR_OPCAO}16.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade no Tempo"
+            f"   {COR_OPCAO}16.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade"
+        )
+        print(
+            f"   {COR_OPCAO}17.{COR_RESET} Ranking Causas Morte--> Corrida de Capítulos do CID-10"
         )
 
         print(f"\n {COR_SECCAO}⚙️  [BLOCO E] MODELAÇÃO MATEMÁTICA{COR_RESET}")
         print(
-            f"   {COR_OPCAO}17.{COR_RESET} Executar Regressão OLS (Sumário Estatístico no Terminal)"
+            f"   {COR_OPCAO}18.{COR_RESET} Executar Regressão OLS (Sumário Estatístico)"
         )
-
         print(
-            f"\n {COR_TITULO}────────────────────────────────────────────────────────────"
-        )
-        print(f"   {COR_OPCAO}0. Sair do Programa{COR_RESET}")
-        print(
-            f"{COR_TITULO}────────────────────────────────────────────────────────────{COR_RESET}"
+            f"{COR_TITULO}────────────────────────────────────────────────────────────\n   {COR_OPCAO}0. Sair do Programa{COR_RESET}\n────────────────────────────────────────────────────────────{COR_RESET}"
         )
 
         try:
             escolha = input(f"\n👉 Selecione o Gráfico/Ação: {COR_OPCAO}")
             print(f"{COR_RESET}", end="")
-        except (KeyboardInterrupt, EOFError):
-            print("\n\nPrograma interrompido. Até logo!")
+        except:
             sys.exit()
 
-        # Lógica de Encaminhamento
         if escolha in [str(i) for i in range(1, 12)]:
-            modo_selecionado = perguntar_modo()
+            modo = perguntar_modo_dispersao()
             if escolha == "1":
-                graf_alocacao_reativa(modo_selecionado)
+                graf_alocacao_reativa(modo)
             elif escolha == "2":
-                graf_fator_protecao(modo_selecionado)
+                graf_fator_protecao(modo)
             elif escolha == "3":
-                graf_enfermaria(modo_selecionado)
+                graf_enfermaria(modo)
             elif escolha == "4":
-                graf_paradoxo_regioes(modo_selecionado)
+                graf_paradoxo_regioes(modo)
             elif escolha == "5":
-                graf_vies_confundimento(modo_selecionado)
+                graf_vies_confundimento(modo)
             elif escolha == "6":
-                graf_gini_mortalidade(modo_selecionado)
+                graf_gini_mortalidade(modo)
             elif escolha == "7":
-                graf_pib_mortalidade(modo_selecionado)
+                graf_pib_mortalidade(modo)
             elif escolha == "8":
-                graf_taxa_evitabilidade(modo_selecionado)
+                graf_taxa_evitabilidade(modo)
             elif escolha == "9":
-                graf_prova_colapso(modo_selecionado)
+                graf_prova_colapso(modo)
             elif escolha == "10":
-                graf_corrida_relogio(modo_selecionado)
+                graf_corrida_relogio(modo)
             elif escolha == "11":
-                graf_gargalo_gravidade(modo_selecionado)
-            input("\nPressione [ENTER] para voltar ao menu...")
+                graf_gargalo_gravidade(modo)
+            input("\nPressione [ENTER] para voltar...")
 
-        elif escolha in ["12", "13", "14", "15", "16"]:
+        elif escolha in ["12", "13", "14", "15", "16", "17"]:
             if escolha == "12":
                 graf_evolucao_nacional_linha()
             elif escolha == "13":
-                modo_selecionado = perguntar_modo()
-                graf_mix_publico_privado(modo_selecionado)
+                graf_mix_publico_privado(perguntar_modo_simples())
             elif escolha == "14":
                 graf_heatmap_regional()
             elif escolha == "15":
                 graf_matriz_correlacao()
             elif escolha == "16":
                 graf_eixo_duplo_historico()
-            input("\nPressione [ENTER] para voltar ao menu...")
+            elif escolha == "17":
+                graf_ranking_cid10()
+            input("\nPressione [ENTER] para voltar...")
 
-        elif escolha == "17":
+        elif escolha == "18":
             limpar_tela()
             rodar_regressao_ols()
-            input("\nPressione [ENTER] para voltar ao menu principal...")
-
+            input("\nPressione [ENTER] para voltar...")
         elif escolha == "0":
             limpar_tela()
-            print("\n[INFO] Programa encerrado com sucesso. Até à próxima!\n")
+            print("\nPrograma encerrado!\n")
             sys.exit()
         else:
-            print("\n[ERRO] Opção inválida! Escolha de 0 a 17.")
-            input("Pressione [ENTER] para tentar novamente...")
+            input("\nOpção inválida! Pressione [ENTER] para tentar novamente...")
 
 
 if __name__ == "__main__":
