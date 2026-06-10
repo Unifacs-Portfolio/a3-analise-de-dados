@@ -214,7 +214,6 @@ def gerador_grafico(
     max_y=None,
     min_x=0,
     min_y=0,
-    discrete_colors=px.colors.qualitative.Safe,
 ):
     if x_col not in df_dados.columns or y_col not in df_dados.columns:
         return print(
@@ -223,78 +222,82 @@ def gerador_grafico(
 
     print("A renderizar gráfico...")
     data = df_dados.copy()
-    escopo_tendencia, cor_grafico, kwargs = "trace", color, {}
 
+    # 1. Agregação Se for Modo Consolidado
     if modo == "consolidado":
         data = (
             data.groupby(["nome_unidade_federativa", "regiao_ibge", "regiao_id"])
             .mean(numeric_only=True)
             .reset_index()
         )
-        titulo, escopo_tendencia = titulo_consol, "overall"
-        fig = px.scatter(
-            data,
-            x=x_col,
-            y=y_col,
-            color=cor_grafico,
-            hover_name="nome_unidade_federativa",
-            trendline="ols",
-            trendline_scope=escopo_tendencia,
-            title=titulo,
-            color_discrete_map=CORES_REGIOES,
-            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
-            **kwargs,
-        )
 
-    elif modo == "animado_regional":
-        kwargs = {
-            "animation_frame": "ano",
-            "animation_group": "nome_unidade_federativa",
-        }
+    # 2. Configurações Base da Animação
+    kwargs = {}
+    if modo != "consolidado":
+        kwargs["animation_frame"] = "ano"
+        kwargs["animation_group"] = "nome_unidade_federativa"
         if max_x:
             kwargs["range_x"] = [min_x, max_x]
         if max_y:
             kwargs["range_y"] = [min_y, max_y]
+
+    # 3. O TRUQUE DE EXAGERO VISUAL PARA O TAMANHO (Corrige o IDHM)
+    if size and size in data.columns:
+        min_val = data[size].min()
+        # Subtraímos o mínimo e elevamos ao quadrado.
+        # O "+ 0.05" impede que o menor estado fique invisível (tamanho 0)
+        data["tamanho_visual"] = (data[size] - min_val + 0.05) ** 2
+
+        kwargs["size"] = "tamanho_visual"
+        kwargs["size_max"] = 55
+        # Esconde o truque matemático e mostra o valor real na tooltip!
+        kwargs["hover_data"] = {size: True, "tamanho_visual": False}
+
+    # 4. Geração do Gráfico Consoante o Modo
+    if modo == "consolidado":
+        fig = px.scatter(
+            data,
+            x=x_col,
+            y=y_col,
+            color=color,
+            hover_name="nome_unidade_federativa",
+            trendline="ols",
+            trendline_scope="overall",
+            title=titulo_consol,
+            color_discrete_map=CORES_REGIOES,
+            labels=MAPA_NOMES,
+            **kwargs,
+        )
+    elif modo == "animado_regional":
         titulo = titulo_animado + " <br><sup>(Com Linhas de Tendência Regionais)</sup>"
         fig = px.scatter(
             data,
             x=x_col,
             y=y_col,
-            color=cor_grafico,
+            color=color,
             hover_name="nome_unidade_federativa",
             trendline="ols",
             trendline_scope="trace",
             title=titulo,
             color_discrete_map=CORES_REGIOES,
-            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
+            labels=MAPA_NOMES,
             **kwargs,
         )
-
     elif modo == "animado_nacional":
-        kwargs = {
-            "animation_frame": "ano",
-            "animation_group": "nome_unidade_federativa",
-        }
-        if max_x:
-            kwargs["range_x"] = [min_x, max_x]
-        if max_y:
-            kwargs["range_y"] = [min_y, max_y]
         titulo = (
             titulo_animado + " <br><sup>(Tendência Nacional Dinâmica do Brasil)</sup>"
         )
-        cor_grafico = "regiao_id"
-
         fig = px.scatter(
             data,
             x=x_col,
             y=y_col,
-            color=cor_grafico,
+            color="regiao_id",
             hover_name="nome_unidade_federativa",
             trendline="ols",
             trendline_scope="trace",
             title=titulo,
             color_continuous_scale=ESCALA_CONTINUA_REGIOES,
-            labels=MAPA_NOMES,  # <-- TRADUÇÃO DOS NOMES AQUI
+            labels=MAPA_NOMES,
             **kwargs,
         )
         fig.update_layout(
@@ -308,16 +311,7 @@ def gerador_grafico(
             )
         )
 
-    if size and size in data.columns:
-        fig.update_traces(
-            marker=dict(
-                size=data[size],
-                sizemode="area",
-                sizeref=2.0 * max(data[size]) / (45.0**2),
-                sizemin=4,
-            )
-        )
-
+    # 5. Formatação Final
     fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color="black")))
     fig.update_layout(template="plotly_white")
     fig.show()
