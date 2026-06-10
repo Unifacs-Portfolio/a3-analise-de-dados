@@ -449,7 +449,7 @@ def graf_corrida_relogio(modo):
         "equip_vida_sus_100k",
         "cap_ix_100k",
         modo,
-        "<b>[ANIMADO] Equipamentos de Vida vs Infartos/AVCs Gerais</b>",
+        "<b>[ANIMADO] Equipamentos de Vida vs Infartos/AVCs Gerais (Tamanho = População)</b>",
         "<b>[MÉDIA GERAL] Equipamentos de Vida vs Infartos/AVCs Gerais</b>",
         size="populacao",
         max_x=LIMITES.get("max_equip"),
@@ -466,7 +466,7 @@ def graf_gargalo_gravidade(modo):
         "dias_por_internacao",
         "cap_ix_hospital_100k",
         modo,
-        "<b>[ANIMADO] O Gargalo da Fila: Dias p/ Internação vs Mortes Cardiovasculares</b>",
+        "<b>[ANIMADO] O Gargalo da Fila: Dias p/ Internação vs Mortes Cardiovasculares (Tamanho Bolha = Equip. Suporte à Vida SUS)</b>",
         "<b>[MÉDIA GERAL] O Gargalo da Fila: (Tamanho Bolha = Equip. Suporte à Vida)</b>",
         size="tamanho_bolha" if "tamanho_bolha" in df_temp.columns else None,
         max_x=LIMITES.get("max_dias_por_int"),
@@ -755,9 +755,7 @@ def menu_principal():
         print(
             f"{COR_TITULO}╔════════════════════════════════════════════════════════════╗\n║     PAINEL DE ANÁLISE: SAÚDE PÚBLICA E MORTALIDADE         ║\n╚════════════════════════════════════════════════════════════╝{COR_RESET}"
         )
-        print(
-            f"\n {COR_SECCAO}📊 [BLOCO A] STORYTELLING & RELAÇÕES CLÍNICAS{COR_RESET}"
-        )
+        print(f"\n {COR_SECCAO}📊 [BLOCO A] RELAÇÕES CLÍNICAS{COR_RESET}")
         print(
             f"   {COR_OPCAO}1.{COR_RESET} Alocação Reativa     --> UTIs vs Mortalidade"
         )
