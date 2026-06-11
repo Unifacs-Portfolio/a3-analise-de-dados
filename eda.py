@@ -123,9 +123,19 @@ taxas_populacionais = [
     ("internacoes", "internacoes_100k", 100000, "max_int"),
     ("media_equip_manut_vida_sus", "equip_vida_sus_100k", 100000, "max_equip"),
     ("internacoes_sus_total", "internacoes_sus_100k", 100000, "max_int_sus"),
-    ("obitos_domicilio_geral", "obitos_domicilio_100k", 100000, "max_obitos_dom"),
+    (
+        "obitos_domicilio",
+        "obitos_domicilio_100k",
+        100000,
+        "max_obitos_dom",
+    ),
     ("Cap IX_geral", "cap_ix_100k", 100000, "max_cap_ix"),
-    ("obitos_hospital_geral", "obitos_hospital_100k", 100000, "max_obitos_hosp"),
+    (
+        "obitos_hospital",
+        "obitos_hospital_100k",
+        100000,
+        "max_obitos_hosp",
+    ),
     ("dias_internacao_sus_total", "dias_internacao_sus_100k", 100000, "max_dias_int"),
     ("2. Causas mal definidas", "causas_mal_definidas_100k", 100000, "max_mal_def"),
     ("obitos_outro_estab_saude", "obitos_outro_estab_100k", 100000, "max_out_estab"),
@@ -707,6 +717,19 @@ def graf_ranking_cid10():
     fig.show()
 
 
+def graf_morte_silenciosa(modo):
+    gerador_grafico(
+        df,
+        "internacoes_100k",
+        "obitos_domicilio_100k",
+        modo,
+        "<b>[ANIMADO] A Morte Silenciosa: Menos Internações geram mais Mortes em Domicílio</b>",
+        "<b>[MÉDIA GERAL] A Morte Silenciosa: Menos Internações geram mais Mortes em Domicílio</b>",
+        max_x=LIMITES.get("max_int"),
+        max_y=LIMITES.get("max_obitos_dom"),
+    )
+
+
 # --- ESTATÍSTICA ---
 def rodar_regressao_ols():
     print("\n" + "=" * 50 + "\nRESULTADO DO MODELO DE REGRESSÃO (OLS)\n" + "=" * 50)
@@ -798,34 +821,35 @@ def menu_principal():
         )
 
         print(f"\n {COR_SECCAO}🚨 [BLOCO C] COLAPSO E LETALIDADE{COR_RESET}")
+        # --- CORREÇÃO AQUI: Alinhando a numeração visual ---
         print(
-            f"   {COR_OPCAO}8.{COR_RESET} Prova do Colapso     --> Internações vs Morte em UPA/Ambulância"
+            f"   {COR_OPCAO}8.{COR_RESET} Morte Silenciosa     --> Internações vs Mortes em Domicílio"
         )
         print(
-            f"   {COR_OPCAO}9.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças Cap IX"
+            f"   {COR_OPCAO}9.{COR_RESET} Corrida p/ Vida      --> Equipamentos vs Doenças Cap IX"
         )
         print(
-            f"   {COR_OPCAO}10.{COR_RESET} O Gargalo da Fila   --> Média de Dias Internados vs Morte Cardíaca"
+            f"   {COR_OPCAO}10.{COR_RESET} O Gargalo da Fila    --> Média de Dias Internados vs Morte Cardíaca"
         )
 
         print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
         print(
-            f"   {COR_OPCAO}11.{COR_RESET} Evolução Nacional   --> Linha do Tempo (Taxa Brasil)"
+            f"   {COR_OPCAO}11.{COR_RESET} Evolução Nacional    --> Linha do Tempo (Taxa Brasil)"
         )
         print(
-            f"   {COR_OPCAO}12.{COR_RESET} Mix Público/Privado --> Corrida de Barras (% de UTI SUS)"
+            f"   {COR_OPCAO}12.{COR_RESET} Mix Público/Privado  --> Corrida de Barras (% de UTI SUS)"
         )
         print(
-            f"   {COR_OPCAO}13.{COR_RESET} Mapa de Calor       --> Evolução Regional por Ano"
+            f"   {COR_OPCAO}13.{COR_RESET} Mapa de Calor        --> Evolução Regional por Ano"
         )
         print(
-            f"   {COR_OPCAO}14.{COR_RESET} Matriz de Correlação--> Interação Global de Variáveis"
+            f"   {COR_OPCAO}14.{COR_RESET} Matriz de Correlação --> Interação Global de Variáveis"
         )
         print(
-            f"   {COR_OPCAO}15.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade"
+            f"   {COR_OPCAO}15.{COR_RESET} Eixo Duplo Histórico --> Infraestrutura vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}16.{COR_RESET} Ranking Causas Morte--> Corrida de Capítulos do CID-10"
+            f"   {COR_OPCAO}16.{COR_RESET} Ranking Causas Morte --> Corrida de Capítulos do CID-10"
         )
 
         print(f"\n {COR_SECCAO}⚙️  [BLOCO E] MODELAÇÃO MATEMÁTICA{COR_RESET}")
@@ -842,7 +866,7 @@ def menu_principal():
         except:
             sys.exit()
 
-        if escolha in [str(i) for i in range(1, 12)]:
+        if escolha in [str(i) for i in range(1, 11)]:
             modo = perguntar_modo_dispersao()
             if escolha == "1":
                 graf_alocacao_reativa(modo)
@@ -858,8 +882,9 @@ def menu_principal():
                 graf_gini_mortalidade(modo)
             elif escolha == "7":
                 graf_apagao_diagnostico(modo)
+            # --- CORREÇÃO AQUI: Alinhando a lógica numérica ---
             elif escolha == "8":
-                graf_prova_colapso(modo)
+                graf_morte_silenciosa(modo)
             elif escolha == "9":
                 graf_corrida_relogio(modo)
             elif escolha == "10":
