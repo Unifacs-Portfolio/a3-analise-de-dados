@@ -167,9 +167,6 @@ print("[2/2] Dados processados com sucesso!\n")
 # ==============================================================================
 # 2. FUNÇÕES GERADORAS DE GRÁFICOS DINÂMICOS
 # ==============================================================================
-# ==============================================================================
-# 2. FUNÇÕES GERADORAS DE GRÁFICOS DINÂMICOS
-# ==============================================================================
 
 # Dicionário mestre para formatar automaticamente todos os eixos e tooltips
 MAPA_NOMES = {
@@ -244,13 +241,10 @@ def gerador_grafico(
     # 3. O TRUQUE DE EXAGERO VISUAL PARA O TAMANHO (Corrige o IDHM)
     if size and size in data.columns:
         min_val = data[size].min()
-        # Subtraímos o mínimo e elevamos ao quadrado.
-        # O "+ 0.05" impede que o menor estado fique invisível (tamanho 0)
         data["tamanho_visual"] = (data[size] - min_val + 0.05) ** 2
 
         kwargs["size"] = "tamanho_visual"
         kwargs["size_max"] = 55
-        # Esconde o truque matemático e mostra o valor real na tooltip!
         kwargs["hover_data"] = {size: True, "tamanho_visual": False}
 
     # 4. Geração do Gráfico Consoante o Modo
@@ -287,32 +281,55 @@ def gerador_grafico(
         titulo = (
             titulo_animado + " <br><sup>(Tendência Nacional Dinâmica do Brasil)</sup>"
         )
+
+        # PASSO A: Cria o gráfico visual principal com os pontos coloridos por Região (sem linha)
         fig = px.scatter(
             data,
             x=x_col,
             y=y_col,
-            color="regiao_id",
+            color=color,
             hover_name="nome_unidade_federativa",
-            trendline="ols",
-            trendline_scope="trace",
             title=titulo,
-            color_continuous_scale=ESCALA_CONTINUA_REGIOES,
+            color_discrete_map=CORES_REGIOES,
             labels=MAPA_NOMES,
             **kwargs,
         )
-        fig.update_layout(
-            coloraxis_colorbar=dict(
-                title="Região",
-                tickmode="array",
-                tickvals=[0, 1, 2, 3, 4],
-                ticktext=["Norte", "Nordeste", "Sudeste", "Centro-Oeste", "Sul"],
-                len=0.6,
-                thickness=20,
-            )
+
+        # PASSO B: Cria o "Gráfico Fantasma" sem cores para forçar o cálculo OLS limpo ano a ano
+        kwargs_fantasma = kwargs.copy()
+        if "hover_data" in kwargs_fantasma:
+            del kwargs_fantasma["hover_data"]  # Remove dados extras
+        fig_fantasma = px.scatter(
+            data, x=x_col, y=y_col, trendline="ols", **kwargs_fantasma
         )
 
-    # 5. Formatação Final
-    fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color="black")))
+        # PASSO C: Roubar a linha do frame inicial do fantasma e colar no gráfico principal
+        linhas_iniciais = [t for t in fig_fantasma.data if t.mode == "lines"]
+        if linhas_iniciais:
+            linha_base = linhas_iniciais[0]
+            linha_base.line.color = (
+                "black"  # Pinta a linha geral de preto para dar destaque
+            )
+            linha_base.line.width = 3
+            linha_base.name = "Tendência Brasil"
+            linha_base.showlegend = True
+            fig.add_trace(linha_base)
+
+        # PASSO D: Fazer a mesma injeção mágica para CADA ANO da animação
+        for i, frame in enumerate(fig.frames):
+            linhas_frame = [t for t in fig_fantasma.frames[i].data if t.mode == "lines"]
+            if linhas_frame:
+                linha_f = linhas_frame[0]
+                linha_f.line.color = "black"
+                linha_f.line.width = 3
+                # Adiciona a linha de tendência animada aos dados das bolinhas
+                frame.data = list(frame.data) + [linha_f]
+
+    # 5. Formatação Final (Aplica borda preta apenas nas bolhas, ignorando as linhas)
+    fig.update_traces(
+        marker=dict(opacity=0.8, line=dict(width=1, color="black")),
+        selector=dict(mode="markers"),
+    )
     fig.update_layout(template="plotly_white")
     fig.show()
 
@@ -397,20 +414,6 @@ def graf_gini_mortalidade(modo):
         "<b>[MÉDIA GERAL] Desigualdade vs Mortalidade (GINI)</b>",
         min_x=LIMITES.get("min_gini", 0),
         max_x=LIMITES.get("max_gini", 1),
-        max_y=LIMITES.get("max_mort"),
-    )
-
-
-def graf_pib_mortalidade(modo):
-    gerador_grafico(
-        df,
-        "pib_per_capita_absoluto",
-        "mortalidade_evitavel_100k",
-        modo,
-        "<b>[ANIMADO] Riqueza Absoluta vs Mortalidade (Tamanho = IDHM)</b>",
-        "<b>[MÉDIA GERAL] Riqueza Absoluta vs Mortalidade (Tamanho = IDHM)</b>",
-        size="idhm",
-        max_x=LIMITES.get("max_pib"),
         max_y=LIMITES.get("max_mort"),
     )
 
@@ -644,14 +647,21 @@ def graf_eixo_duplo_historico():
 
 def graf_ranking_cid10():
     print("A renderizar o Ranking de Causas (CID-10)...")
+
+    # 1. Filtramos apenas as colunas que contêm os sufixos exatos desejados
+    sufixos_permitidos = ["_geral", "_hospital", "_domicilio"]
     cols_cid = [
         c
         for c in df.columns
-        if c.startswith("Cap ") and not c.endswith("_y") and "ignorado" not in c.lower()
+        if c.startswith("Cap ")
+        and not c.endswith("_y")
+        and any(sufixo in c for sufixo in sufixos_permitidos)
     ]
+
     if not cols_cid:
         return print("\n[ERRO] Não foram encontradas colunas do CID-10 válidas.")
 
+    # 2. Agrupamento e transformação estrutural
     df_cid = df.groupby("ano")[cols_cid].sum().reset_index()
     df_melt = df_cid.melt(
         id_vars=["ano"],
@@ -659,22 +669,29 @@ def graf_ranking_cid10():
         var_name="Capitulo",
         value_name="Total_Obitos",
     )
+
+    # 3. Limpeza e Formatação Elegante dos Rótulos
     df_melt["Capitulo"] = (
         df_melt["Capitulo"]
         .str.replace("_x", "", regex=False)
-        .str.replace("_geral", "", regex=False)
+        .str.replace("_geral", " (Geral)", regex=False)
+        .str.replace("_hospital", " (Hospital)", regex=False)
+        .str.replace("_domicilio", " (Domicílio)", regex=False)
     )
+
+    # 4. Ordenação e Limites
     df_melt = df_melt[df_melt["Total_Obitos"] > 0]
     df_melt = df_melt.sort_values(by=["ano", "Total_Obitos"], ascending=[True, True])
     limite_max = df_melt["Total_Obitos"].max() * 1.15
 
+    # 5. Renderização
     fig = px.bar(
         df_melt,
         x="Total_Obitos",
         y="Capitulo",
         animation_frame="ano",
         orientation="h",
-        title="<b>Ranking de Causas: Evolução dos Óbitos por Capítulo (CID-10)</b>",
+        title="<b>Ranking de Causas: Evolução dos Óbitos (Geral, Hospital e Domicílio)</b>",
         labels={"Total_Obitos": "Volume de Óbitos", "Capitulo": "CID-10", "ano": "Ano"},
         color="Capitulo",
         text="Total_Obitos",
@@ -777,46 +794,43 @@ def menu_principal():
             f"   {COR_OPCAO}6.{COR_RESET} Viés Desigualdade    --> Índice de GINI vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}7.{COR_RESET} Viés Riqueza (PIB)   --> PIB per Capita vs Mortalidade"
-        )
-        print(
-            f"   {COR_OPCAO}8.{COR_RESET} Apagão Diagnóstico   --> IDHM vs Causas Mal Definidas"
+            f"   {COR_OPCAO}7.{COR_RESET} Apagão Diagnóstico   --> IDHM vs Causas Mal Definidas"
         )
 
         print(f"\n {COR_SECCAO}🚨 [BLOCO C] COLAPSO E LETALIDADE{COR_RESET}")
         print(
-            f"   {COR_OPCAO}9.{COR_RESET} Prova do Colapso     --> Internações vs Morte em UPA/Ambulância"
+            f"   {COR_OPCAO}8.{COR_RESET} Prova do Colapso     --> Internações vs Morte em UPA/Ambulância"
         )
         print(
-            f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças Cap IX"
+            f"   {COR_OPCAO}9.{COR_RESET} Corrida p/ Vida     --> Equipamentos vs Doenças Cap IX"
         )
         print(
-            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila   --> Média de Dias Internados vs Morte Cardíaca"
+            f"   {COR_OPCAO}10.{COR_RESET} O Gargalo da Fila   --> Média de Dias Internados vs Morte Cardíaca"
         )
 
         print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
         print(
-            f"   {COR_OPCAO}12.{COR_RESET} Evolução Nacional   --> Linha do Tempo (Taxa Brasil)"
+            f"   {COR_OPCAO}11.{COR_RESET} Evolução Nacional   --> Linha do Tempo (Taxa Brasil)"
         )
         print(
-            f"   {COR_OPCAO}13.{COR_RESET} Mix Público/Privado --> Corrida de Barras (% de UTI SUS)"
+            f"   {COR_OPCAO}12.{COR_RESET} Mix Público/Privado --> Corrida de Barras (% de UTI SUS)"
         )
         print(
-            f"   {COR_OPCAO}14.{COR_RESET} Mapa de Calor       --> Evolução Regional por Ano"
+            f"   {COR_OPCAO}13.{COR_RESET} Mapa de Calor       --> Evolução Regional por Ano"
         )
         print(
-            f"   {COR_OPCAO}15.{COR_RESET} Matriz de Correlação--> Interação Global de Variáveis"
+            f"   {COR_OPCAO}14.{COR_RESET} Matriz de Correlação--> Interação Global de Variáveis"
         )
         print(
-            f"   {COR_OPCAO}16.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade"
+            f"   {COR_OPCAO}15.{COR_RESET} Eixo Duplo Histórico--> Infraestrutura vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}17.{COR_RESET} Ranking Causas Morte--> Corrida de Capítulos do CID-10"
+            f"   {COR_OPCAO}16.{COR_RESET} Ranking Causas Morte--> Corrida de Capítulos do CID-10"
         )
 
         print(f"\n {COR_SECCAO}⚙️  [BLOCO E] MODELAÇÃO MATEMÁTICA{COR_RESET}")
         print(
-            f"   {COR_OPCAO}18.{COR_RESET} Executar Regressão OLS (Sumário Estatístico)"
+            f"   {COR_OPCAO}17.{COR_RESET} Executar Regressão OLS (Sumário Estatístico)"
         )
         print(
             f"{COR_TITULO}────────────────────────────────────────────────────────────\n   {COR_OPCAO}0. Sair do Programa{COR_RESET}\n────────────────────────────────────────────────────────────{COR_RESET}"
@@ -843,33 +857,31 @@ def menu_principal():
             elif escolha == "6":
                 graf_gini_mortalidade(modo)
             elif escolha == "7":
-                graf_pib_mortalidade(modo)
-            elif escolha == "8":
                 graf_apagao_diagnostico(modo)
-            elif escolha == "9":
+            elif escolha == "8":
                 graf_prova_colapso(modo)
-            elif escolha == "10":
+            elif escolha == "9":
                 graf_corrida_relogio(modo)
-            elif escolha == "11":
+            elif escolha == "10":
                 graf_gargalo_gravidade(modo)
             input("\nPressione [ENTER] para voltar...")
 
-        elif escolha in ["12", "13", "14", "15", "16", "17"]:
-            if escolha == "12":
+        elif escolha in ["11", "12", "13", "14", "15", "16"]:
+            if escolha == "11":
                 graf_evolucao_nacional_linha()
-            elif escolha == "13":
+            elif escolha == "12":
                 graf_mix_publico_privado(perguntar_modo_simples())
-            elif escolha == "14":
+            elif escolha == "13":
                 graf_heatmap_regional()
-            elif escolha == "15":
+            elif escolha == "14":
                 graf_matriz_correlacao()
-            elif escolha == "16":
+            elif escolha == "15":
                 graf_eixo_duplo_historico()
-            elif escolha == "17":
+            elif escolha == "16":
                 graf_ranking_cid10()
             input("\nPressione [ENTER] para voltar...")
 
-        elif escolha == "18":
+        elif escolha == "17":
             limpar_tela()
             rodar_regressao_ols()
             input("\nPressione [ENTER] para voltar...")
