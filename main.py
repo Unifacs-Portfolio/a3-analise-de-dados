@@ -227,7 +227,7 @@ def processar_datasus_obitos_evitaveis(caminho_arquivo):
             caminho_arquivo,
             encoding="latin1",
             sep=";",
-            header=5,
+            header=4,
             usecols=["Unidade da Federação", "2018", "2021", "2022", "2023"],
             thousands=".",
             decimal=",",
