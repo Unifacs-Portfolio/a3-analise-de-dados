@@ -229,9 +229,10 @@ def gerador_grafico(
 
     print("A renderizar gráfico...")
     data = df_dados.copy()
+    hover_target = "nome_unidade_federativa"
 
-    # 1. Agregação Se for Modo Consolidado
-    if modo == "consolidado":
+    # 1. Agregação Matemática (Ambos os modos consolidados mantêm os 27 estados individuais)
+    if modo in ["consolidado", "consolidado_regional"]:
         data = (
             data.groupby(["nome_unidade_federativa", "regiao_ibge", "regiao_id"])
             .mean(numeric_only=True)
@@ -240,38 +241,50 @@ def gerador_grafico(
 
     # 2. Configurações Base da Animação
     kwargs = {}
-    if modo != "consolidado":
+    if modo not in ["consolidado", "consolidado_regional"]:
         kwargs["animation_frame"] = "ano"
-        kwargs["animation_group"] = "nome_unidade_federativa"
+        kwargs["animation_group"] = hover_target
         if max_x:
             kwargs["range_x"] = [min_x, max_x]
         if max_y:
             kwargs["range_y"] = [min_y, max_y]
 
-    # 3. O TRUQUE DE EXAGERO VISUAL PARA O TAMANHO (Corrige o IDHM)
+    # 3. Exagero Visual para o Tamanho (IDHM/População)
     if size and size in data.columns:
         min_val = data[size].min()
         data["tamanho_visual"] = (data[size] - min_val + 0.05) ** 2
-
         kwargs["size"] = "tamanho_visual"
         kwargs["size_max"] = 55
         kwargs["hover_data"] = {size: True, "tamanho_visual": False}
 
     # 4. Geração do Gráfico Consoante o Modo
-    if modo == "consolidado":
+    if modo in ["consolidado", "consolidado_regional"]:
+        # Se for 'consolidado', o escopo é 'overall' (1 linha mestre).
+        # Se for 'consolidado_regional', o escopo é 'trace' (5 linhas, uma para cada região).
+        escopo_tendencia = "overall" if modo == "consolidado" else "trace"
+        sub_titulo = (
+            "Linha de Tendência Geral"
+            if modo == "consolidado"
+            else "Linhas de Tendência por Região"
+        )
+        titulo_final = (
+            titulo_consol + f" <br><sup>(Média Histórica: {sub_titulo})</sup>"
+        )
+
         fig = px.scatter(
             data,
             x=x_col,
             y=y_col,
             color=color,
-            hover_name="nome_unidade_federativa",
+            hover_name=hover_target,
             trendline="ols",
-            trendline_scope="overall",
-            title=titulo_consol,
+            trendline_scope=escopo_tendencia,
+            title=titulo_final,
             color_discrete_map=CORES_REGIOES,
             labels=MAPA_NOMES,
             **kwargs,
         )
+
     elif modo == "animado_regional":
         titulo = titulo_animado + " <br><sup>(Com Linhas de Tendência Regionais)</sup>"
         fig = px.scatter(
@@ -279,7 +292,7 @@ def gerador_grafico(
             x=x_col,
             y=y_col,
             color=color,
-            hover_name="nome_unidade_federativa",
+            hover_name=hover_target,
             trendline="ols",
             trendline_scope="trace",
             title=titulo,
@@ -287,55 +300,49 @@ def gerador_grafico(
             labels=MAPA_NOMES,
             **kwargs,
         )
+
     elif modo == "animado_nacional":
         titulo = (
             titulo_animado + " <br><sup>(Tendência Nacional Dinâmica do Brasil)</sup>"
         )
-
-        # PASSO A: Cria o gráfico visual principal com os pontos coloridos por Região (sem linha)
         fig = px.scatter(
             data,
             x=x_col,
             y=y_col,
             color=color,
-            hover_name="nome_unidade_federativa",
+            hover_name=hover_target,
             title=titulo,
             color_discrete_map=CORES_REGIOES,
             labels=MAPA_NOMES,
             **kwargs,
         )
 
-        # PASSO B: Cria o "Gráfico Fantasma" sem cores para forçar o cálculo OLS limpo ano a ano
+        # Gráfico fantasma para recalcular a linha única do país frame a frame
         kwargs_fantasma = kwargs.copy()
         if "hover_data" in kwargs_fantasma:
-            del kwargs_fantasma["hover_data"]  # Remove dados extras
+            del kwargs_fantasma["hover_data"]
         fig_fantasma = px.scatter(
             data, x=x_col, y=y_col, trendline="ols", **kwargs_fantasma
         )
 
-        # PASSO C: Roubar a linha do frame inicial do fantasma e colar no gráfico principal
         linhas_iniciais = [t for t in fig_fantasma.data if t.mode == "lines"]
         if linhas_iniciais:
             linha_base = linhas_iniciais[0]
-            linha_base.line.color = (
-                "black"  # Pinta a linha geral de preto para dar destaque
-            )
+            linha_base.line.color = "black"
             linha_base.line.width = 3
-            linha_base.name = "Tendência Brasil"
+            linha_base.name = "Tendência Geral"
             linha_base.showlegend = True
             fig.add_trace(linha_base)
 
-        # PASSO D: Fazer a mesma injeção mágica para CADA ANO da animação
         for i, frame in enumerate(fig.frames):
             linhas_frame = [t for t in fig_fantasma.frames[i].data if t.mode == "lines"]
             if linhas_frame:
                 linha_f = linhas_frame[0]
                 linha_f.line.color = "black"
                 linha_f.line.width = 3
-                # Adiciona a linha de tendência animada aos dados das bolinhas
                 frame.data = list(frame.data) + [linha_f]
 
-    # 5. Formatação Final (Aplica borda preta apenas nas bolhas, ignorando as linhas)
+    # 5. Formatação Final
     fig.update_traces(
         marker=dict(opacity=0.8, line=dict(width=1, color="black")),
         selector=dict(mode="markers"),
@@ -758,16 +765,22 @@ def limpar_tela():
 
 def perguntar_modo_dispersao():
     print(
-        "\n   \033[93mComo deseja visualizar as Linhas de Correlação?\033[0m\n   [1] \033[96mAnimado (Linha Geral)\033[0m       - Evolução com a tendência do Brasil\n   [2] \033[96mAnimado (Linhas Regionais)\033[0m  - Evolução com a tendência de cada Região\n   [3] \033[95mVisão Geral Consolidada\033[0m     - Média Histórica Congelada (Todos os anos)"
+        "\n   \033[93mComo deseja visualizar as Linhas de Correlação?\033[0m\n"
+        "   [1] \033[96mAnimado (Linha Geral)\033[0m          - Evolução de todos os Estados (Linha Única)\n"
+        "   [2] \033[96mAnimado (Linhas Regionais)\033[0m     - Evolução de todos os Estados (Linhas por Região)\n"
+        "   [3] \033[95mConsolidado (Linha Geral)\033[0m      - Média Histórica dos Estados (Linha Única)\n"
+        "   [4] \033[95mConsolidado (Linhas Regionais)\033[0m  - Média Histórica dos Estados (Linhas por Região)"
     )
     while True:
-        resp = input("   👉 Escolha (1, 2 ou 3) » ")
+        resp = input("   👉 Escolha (1 a 4) » ")
         if resp == "1":
             return "animado_nacional"
         if resp == "2":
             return "animado_regional"
         if resp == "3":
             return "consolidado"
+        if resp == "4":
+            return "consolidado_regional"
         print("   Opção inválida.")
 
 
