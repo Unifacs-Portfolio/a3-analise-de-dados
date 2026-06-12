@@ -821,40 +821,42 @@ def menu_principal():
         )
 
         print(f"\n {COR_SECCAO}🚨 [BLOCO C] COLAPSO E LETALIDADE{COR_RESET}")
-        # --- CORREÇÃO AQUI: Alinhando a numeração visual ---
         print(
             f"   {COR_OPCAO}8.{COR_RESET} Morte Silenciosa     --> Internações vs Mortes em Domicílio"
         )
         print(
-            f"   {COR_OPCAO}9.{COR_RESET} Corrida p/ Vida      --> Equipamentos vs Doenças Cap IX"
+            f"   {COR_OPCAO}9.{COR_RESET} Retenção em UPAs     --> Internações vs Mortes em UPAs"
         )
         print(
-            f"   {COR_OPCAO}10.{COR_RESET} O Gargalo da Fila    --> Média de Dias Internados vs Morte Cardíaca"
+            f"   {COR_OPCAO}10.{COR_RESET} Corrida p/ Vida      --> Equipamentos vs Doenças Cap IX"
+        )
+        print(
+            f"   {COR_OPCAO}11.{COR_RESET} O Gargalo da Fila    --> Média de Dias Internados vs Morte Cardíaca"
         )
 
         print(f"\n {COR_SECCAO}📈 [BLOCO D] VISÕES GLOBAIS PANORÂMICAS{COR_RESET}")
         print(
-            f"   {COR_OPCAO}11.{COR_RESET} Evolução Nacional    --> Linha do Tempo (Taxa Brasil)"
+            f"   {COR_OPCAO}12.{COR_RESET} Evolução Nacional    --> Linha do Tempo (Taxa Brasil)"
         )
         print(
-            f"   {COR_OPCAO}12.{COR_RESET} Mix Público/Privado  --> Corrida de Barras (% de UTI SUS)"
+            f"   {COR_OPCAO}13.{COR_RESET} Mix Público/Privado  --> Corrida de Barras (% de UTI SUS)"
         )
         print(
-            f"   {COR_OPCAO}13.{COR_RESET} Mapa de Calor        --> Evolução Regional por Ano"
+            f"   {COR_OPCAO}14.{COR_RESET} Mapa de Calor        --> Evolução Regional por Ano"
         )
         print(
-            f"   {COR_OPCAO}14.{COR_RESET} Matriz de Correlação --> Interação Global de Variáveis"
+            f"   {COR_OPCAO}15.{COR_RESET} Matriz de Correlação --> Interação Global de Variáveis"
         )
         print(
-            f"   {COR_OPCAO}15.{COR_RESET} Eixo Duplo Histórico --> Infraestrutura vs Mortalidade"
+            f"   {COR_OPCAO}16.{COR_RESET} Eixo Duplo Histórico --> Infraestrutura vs Mortalidade"
         )
         print(
-            f"   {COR_OPCAO}16.{COR_RESET} Ranking Causas Morte --> Corrida de Capítulos do CID-10"
+            f"   {COR_OPCAO}17.{COR_RESET} Ranking Causas Morte --> Corrida de Capítulos do CID-10"
         )
 
         print(f"\n {COR_SECCAO}⚙️  [BLOCO E] MODELAÇÃO MATEMÁTICA{COR_RESET}")
         print(
-            f"   {COR_OPCAO}17.{COR_RESET} Executar Regressão OLS (Sumário Estatístico)"
+            f"   {COR_OPCAO}18.{COR_RESET} Executar Regressão OLS (Sumário Estatístico)"
         )
         print(
             f"{COR_TITULO}────────────────────────────────────────────────────────────\n   {COR_OPCAO}0. Sair do Programa{COR_RESET}\n────────────────────────────────────────────────────────────{COR_RESET}"
@@ -866,7 +868,7 @@ def menu_principal():
         except:
             sys.exit()
 
-        if escolha in [str(i) for i in range(1, 11)]:
+        if escolha in [str(i) for i in range(1, 12)]:  # Agora vai de 1 a 11
             modo = perguntar_modo_dispersao()
             if escolha == "1":
                 graf_alocacao_reativa(modo)
@@ -882,31 +884,32 @@ def menu_principal():
                 graf_gini_mortalidade(modo)
             elif escolha == "7":
                 graf_apagao_diagnostico(modo)
-            # --- CORREÇÃO AQUI: Alinhando a lógica numérica ---
             elif escolha == "8":
                 graf_morte_silenciosa(modo)
             elif escolha == "9":
-                graf_corrida_relogio(modo)
+                graf_prova_colapso(modo)
             elif escolha == "10":
+                graf_corrida_relogio(modo)
+            elif escolha == "11":
                 graf_gargalo_gravidade(modo)
             input("\nPressione [ENTER] para voltar...")
 
-        elif escolha in ["11", "12", "13", "14", "15", "16"]:
-            if escolha == "11":
+        elif escolha in ["12", "13", "14", "15", "16", "17"]:
+            if escolha == "12":
                 graf_evolucao_nacional_linha()
-            elif escolha == "12":
-                graf_mix_publico_privado(perguntar_modo_simples())
             elif escolha == "13":
-                graf_heatmap_regional()
+                graf_mix_publico_privado(perguntar_modo_simples())
             elif escolha == "14":
-                graf_matriz_correlacao()
+                graf_heatmap_regional()
             elif escolha == "15":
-                graf_eixo_duplo_historico()
+                graf_matriz_correlacao()
             elif escolha == "16":
+                graf_eixo_duplo_historico()
+            elif escolha == "17":
                 graf_ranking_cid10()
             input("\nPressione [ENTER] para voltar...")
 
-        elif escolha == "17":
+        elif escolha == "18":
             limpar_tela()
             rodar_regressao_ols()
             input("\nPressione [ENTER] para voltar...")
