@@ -58,7 +58,6 @@ def main():
     try:
         subprocess.run([python_venv, "main.py"])
         subprocess.run([python_venv, "etlv2.py"])
-        subprocess.run([python_venv, "eda.py"])
     except KeyboardInterrupt:
         print("\n🛑 Aplicação encerrada pelo usuário.")
 
