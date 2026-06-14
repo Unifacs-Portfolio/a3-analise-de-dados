@@ -84,4 +84,6 @@ A3BigData/
 Aqui estão os links respectivos a documentação do projeto e o vídeo de apresentação!
 
 [Video de Apresentação](https://www.youtube.com/watch?v=vDagw8mnkd8)
+---
 [Documentação Oficial](https://drive.google.com/file/d/1c4QUaFWvaCCMt2rNp7hLS1wIikcUj4G0/view?usp=sharing)
+---
