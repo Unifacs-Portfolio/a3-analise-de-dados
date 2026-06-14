@@ -1,0 +1,56 @@
+﻿"Tabela 7435 - Índice de Gini do rendimento domiciliar per capita, a preços médios do ano"
+"Variável - Índice de Gini do rendimento domiciliar per capita, a preços médios do ano (Índice)"
+"Cód.";"Unidade da Federação";"Ano"
+"Cód.";"Unidade da Federação";"2018";"2019";"2020";"2021";"2022";"2023"
+"11";"Rondônia";"0,497";"0,472";"0,439";"0,458";"0,446";"0,454"
+"12";"Acre";"0,559";"0,560";"0,515";"0,539";"0,523";"0,510"
+"13";"Amazonas";"0,545";"0,567";"0,533";"0,541";"0,509";"0,511"
+"14";"Roraima";"0,567";"0,580";"0,540";"0,597";"0,548";"0,521"
+"15";"Pará";"0,561";"0,528";"0,479";"0,528";"0,506";"0,499"
+"16";"Amapá";"0,548";"0,513";"0,500";"0,530";"0,531";"0,491"
+"17";"Tocantins";"0,530";"0,531";"0,486";"0,515";"0,507";"0,478"
+"21";"Maranhão";"0,527";"0,531";"0,482";"0,529";"0,490";"0,491"
+"22";"Piauí";"0,530";"0,538";"0,474";"0,515";"0,518";"0,549"
+"23";"Ceará";"0,547";"0,562";"0,542";"0,550";"0,516";"0,510"
+"24";"Rio Grande do Norte";"0,540";"0,555";"0,513";"0,588";"0,523";"0,530"
+"25";"Paraíba";"0,551";"0,563";"0,515";"0,562";"0,558";"0,561"
+"26";"Pernambuco";"0,535";"0,573";"0,536";"0,580";"0,514";"0,495"
+"27";"Alagoas";"0,550";"0,525";"0,509";"0,526";"0,498";"0,486"
+"28";"Sergipe";"0,576";"0,580";"0,522";"0,566";"0,526";"0,503"
+"29";"Bahia";"0,548";"0,555";"0,532";"0,543";"0,507";"0,485"
+"31";"Minas Gerais";"0,492";"0,487";"0,460";"0,486";"0,465";"0,474"
+"32";"Espírito Santo";"0,507";"0,518";"0,482";"0,507";"0,490";"0,483"
+"33";"Rio de Janeiro";"0,544";"0,553";"0,549";"0,566";"0,540";"0,539"
+"35";"São Paulo";"0,539";"0,527";"0,522";"0,532";"0,499";"0,503"
+"41";"Paraná";"0,491";"0,476";"0,460";"0,475";"0,468";"0,461"
+"42";"Santa Catarina";"0,418";"0,422";"0,412";"0,425";"0,419";"0,418"
+"43";"Rio Grande do Sul";"0,486";"0,481";"0,475";"0,467";"0,466";"0,465"
+"50";"Mato Grosso do Sul";"0,491";"0,484";"0,470";"0,497";"0,479";"0,476"
+"51";"Mato Grosso";"0,465";"0,456";"0,463";"0,462";"0,450";"0,453"
+"52";"Goiás";"0,470";"0,460";"0,445";"0,467";"0,455";"0,472"
+"53";"Distrito Federal";"0,571";"0,554";"0,549";"0,567";"0,536";"0,542"
+"Fonte: IBGE. Pesquisa Nacional por Amostra de Domicílios Contínua, acumulado de primeiras visitas, exceto 2020-2022, acumulado de quintas visitas, devido à pandemia de Covid-19."
+
+"Notas"
+"O rendimento de trabalho é captado somente para pessoas de 14 anos ou mais de idade.
+Exclusive as pessoas cuja condição no domicílio era ""Pensionista"", ""Empregado doméstico"" ou ""Parente de empregado doméstico"".
+A partir de 19 de novembro de 2021, as estimativas deste tema passaram a ser divulgadas com base no novo método de ponderação da pesquisa, conforme a Nota Técnica 03/2021. Consequentemente, a série histórica dos indicadores foi atualizada.
+Até o 3º trimestre de 2015, as pessoas em licença remunerada na semana de referência da pesquisa e que estavam afastadas por período inferior a 4 meses eram classificadas como ""ocupadas"". Caso esse afastamento fosse igual ou superior a 4 meses, essas pessoas eram definidas como ""fora da força de trabalho"" e, portanto, não se investigava o rendimento do trabalho.
+A partir do 4º trimestre de 2015, em acordo com as recomendações da 19ª Conferência Internacional de Estatísticos do Trabalho - CIET, da OIT, pessoas em licença remunerada, independentemente do tempo de afastamento, passaram a ser classificadas como ""ocupadas"" e seus rendimentos do trabalho foram coletados normalmente."
+""
+"Legenda"
+"Símbolo";"Significado"
+"-";"Zero absoluto, não resultante de um cálculo ou arredondamento.
+Ex: Em determinado município não existem pessoas de 14 anos de idade sem instrução."
+"0";"Zero resultante de um cálculo ou arredondamento.
+Ex: A inflação do feijão em determinada Região Metropolitana foi 0.
+Determinado município produziu 400 kg de sementes de girassol e os dados da tabela são expressos em toneladas."
+"X";"Valor inibido para não identificar o informante.
+Ex: Determinado município só possui uma empresa produtora de cimento, logo o valor de sua produção deve ser inibido."
+"..";"Valor não se aplica.
+Ex: Não se pode obter o total da produção agrícola em determinado município quando os produtos agrícolas são contabilizados com unidades de medida distintas."
+"...";"Valor não disponível.
+Ex: A produção de feijão em determinado município não foi pesquisada ou determinado município não existia no ano da pesquisa."
+"A a Z
+(exceto X)";"Significa uma faixa de valores. Varia em função da tabela (se for o caso).
+Ex: O nível de precisão da produção estimada de combustíveis está na faixa A (95 a 100%)"

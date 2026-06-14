@@ -1,0 +1,7 @@
+pandas
+seaborn
+matplotlib
+openpyxl
+gdown
+statsmodels
+plotly
