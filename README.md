@@ -21,12 +21,17 @@ Através de um pipeline modular e escalável em Python, o projeto consolida uma 
 
 ## 🚀 Como Executar
 
-Pensando na melhor experiência para os desenvolvedores e na padronização do ambiente, a configuração do projeto foi totalmente automatizada. Você só precisa ter o **Python** instalado na sua máquina.
+Pensando na melhor experiência para os desenvolvedores e na padronização do ambiente, a configuração do projeto foi totalmente automatizada. Você só precisa ter o **Python** e o **Jupiter** instalado na sua máquina.
 
-Abra o terminal na pasta raiz do projeto e execute o comando orquestrador:
+Abra o terminal na pasta raiz do projeto e execute o comando orquestrador para executar o ETL do projeto:
 
 ```bash
 python start.py
+```
+Após isso, rode o script abaixo para rodar o Dashboard com os graficos do projeto!
+
+```bash
+python eda.py
 ```
 --- 
 

@@ -5,7 +5,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pandas as pd
 from functools import reduce
-from utils.utils import remove_footer, split_id_name_unidade_federativa
+from utils.utils import (
+    remove_footer,
+    split_id_name_unidade_federativa,
+    inspecionar_dados,
+)
 
 # =====================================================================
 # FUNÇÕES DIAGNÓSTICO POR IMAGEM
@@ -361,6 +365,8 @@ def extrair_bloco_equipamentos(caminhos_arquivos):
         ),
         dfs_equipamentos,
     )
+
+    inspecionar_dados(df_bloco, "Dados de Equipamentos")
 
     return df_bloco
 

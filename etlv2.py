@@ -657,6 +657,7 @@ if __name__ == "__main__":
         ),
         dfs_para_mesclar,
     )
+    inspecionar_dados(df_consolidado_final, "Dados do CID10")
 
     caminho_saida = "./datasets/dataset_completo_consolidado.csv"
     df_consolidado_final.to_csv(caminho_saida, index=False, encoding="utf-8")

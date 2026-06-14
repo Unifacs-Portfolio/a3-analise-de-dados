@@ -5,7 +5,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pandas as pd
 from functools import reduce
-from utils.utils import remove_footer, split_id_name_unidade_federativa
+from utils.utils import (
+    remove_footer,
+    split_id_name_unidade_federativa,
+    inspecionar_dados,
+)
 
 # =====================================================================
 # FUNÇÕES DE ETL INDIVIDUAIS PARA CADA TIPO DE LEITO
@@ -374,6 +378,8 @@ def extrair_bloco_infraestrutura(caminhos_arquivos):
         ),
         dfs_leitos,
     )
+
+    inspecionar_dados(df_bloco, "Dados de leitos")
     return df_bloco
 
 
