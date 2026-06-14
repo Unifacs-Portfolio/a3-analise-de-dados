@@ -31,7 +31,7 @@ python start.py
 Após isso, rode o script abaixo para rodar o Dashboard com os graficos do projeto!
 
 ```bash
-python eda.py
+python dashboard.py
 ```
 --- 
 
