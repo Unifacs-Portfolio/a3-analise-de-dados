@@ -4,7 +4,7 @@
 * Roan Nascimento Lisboa 
 * Pedro Vinícius Montes dos Reis 
 * Erick Barros Ferreira Gomes
-* Rwmovido -> Marcus Vinícius dos Santos
+* Removido -> Marcus Vinícius dos Santos
 
 Este projeto implementa um ecossistema de **Big Data e Engenharia de Dados (ETL)** focado em investigar o impacto da infraestrutura do Sistema Único de Saúde (SUS) e da desigualdade socioeconômica nas taxas de mortalidade evitável (5 a 74 anos) no Brasil.
 
